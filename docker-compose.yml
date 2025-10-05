@@ -1,29 +1,52 @@
 version: '3.8'
 
 services:
-  chatbot-service:
-    build: .
-    container_name: vocabu-rex-chatbot-service
+  # chatbot-service:
+  #   build: .
+  #   container_name: vocabu-rex-chatbot-service
+  #   ports:
+  #     - "3006:3006"
+  #   environment:
+  #     - GEMINI_API_KEY=${GEMINI_API_KEY}
+  #     - GEMINI_MODEL=${GEMINI_MODEL:-gemini-2.5-flash}
+  #     - SERVICE_HOST=0.0.0.0
+  #     - SERVICE_PORT=3006
+  #     - LOG_LEVEL=${LOG_LEVEL:-INFO}
+  #     - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+  #     - MONGODB_URL=mongodb://mongodb:27017
+  #     - MONGODB_DATABASE=${MONGODB_DATABASE:-vocabu_rex_chatbot}
+  #   volumes:
+  #     - ./logs:/app/logs
+  #   depends_on:
+  #     - mongodb
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3006/api/v1/chat/health')"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #     start_period: 30s
+
+  # MongoDB for storing chat conversations and user data
+  mongodb:
+    image: mongo:7.0
+    container_name: vocabu-rex-mongodb
     ports:
-      - "3006:3006"
+      - "27017:27017"
     environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
-      - SERVICE_HOST=0.0.0.0
-      - SERVICE_PORT=3006
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+      - MONGO_INITDB_DATABASE=vocabu_rex_chatbot
     volumes:
-      - ./logs:/app/logs
+      - mongodb_data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3006/api/v1/chat/health')"]
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
 
-# Optional: Add Redis for production conversation storage
+# Optional: Add Redis for caching
 #  redis:
 #    image: redis:7-alpine
 #    container_name: vocabu-rex-redis
@@ -33,5 +56,6 @@ services:
 #      - redis_data:/data
 #    restart: unless-stopped
 
-#volumes:
+volumes:
+  mongodb_data:
 #  redis_data:

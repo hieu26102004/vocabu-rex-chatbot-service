@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     learning_service_url: str = "http://localhost:3003"
     speech_service_url: str = "http://localhost:3005"
     
+    # MongoDB Configuration
+    mongodb_url: str = "mongodb://localhost:27017"
+    mongodb_database: str = "vocabu_rex_chatbot"
+    
     @property
     def allowed_origins_list(self) -> List[str]:
         """Convert comma-separated origins to list"""

@@ -1,5 +1,6 @@
 """Main FastAPI application"""
 from fastapi import FastAPI
+from contextlib import asynccontextmanager
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
@@ -8,6 +9,7 @@ from datetime import datetime
 from .presentation.controllers.chat_controller import chat_router
 from .presentation.controllers.deeplink_controller import deeplink_router
 from .shared.config import settings
+from .infrastructure.database_connection import connect_to_mongo, close_mongo_connection
 
 # Configure logging
 logging.basicConfig(
@@ -17,13 +19,23 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
-# Create FastAPI app
+
+# Lifespan event handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await connect_to_mongo()
+    logger.info("Application startup completed")
+    yield
+    await close_mongo_connection()
+    logger.info("Application shutdown completed")
+
 app = FastAPI(
     title="VocabuRex Chatbot Service",
     description="AI-powered vocabulary learning chatbot using Gemini API",
     version=settings.service_version,
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    lifespan=lifespan
 )
 
 # CORS middleware
@@ -34,6 +46,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
 
 # Include routers
 app.include_router(chat_router)

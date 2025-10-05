@@ -1,7 +1,7 @@
 """Chat use cases for handling conversation logic"""
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 from ..dtos.chat_dtos import (
     ChatMessageRequest, 
@@ -12,7 +12,9 @@ from ..dtos.chat_dtos import (
 )
 from ...domain.entities.conversation import Conversation
 from ...domain.entities.message import Message, MessageRole, MessageType
-from ...domain.repositories.conversation_repository import ConversationRepository
+from ...domain.entities.user import User
+from ...domain.repositories.chat_repositories import UserRepository, ConversationRepository
+from ...domain.services.ai_service import AIService
 from ...core.exceptions import ConversationNotFoundException, InvalidMessageException
 
 
@@ -20,10 +22,12 @@ class ChatUseCase:
     """Use case for handling chat operations"""
     
     def __init__(
-        self, 
+        self,
+        user_repository: UserRepository,
         conversation_repository: ConversationRepository,
-        ai_service,  # Will be injected from infrastructure layer
+        ai_service: AIService
     ):
+        self.user_repository = user_repository
         self.conversation_repository = conversation_repository
         self.ai_service = ai_service
     
@@ -31,6 +35,16 @@ class ChatUseCase:
         """Start a new conversation"""
         conversation_id = str(uuid.uuid4())
         
+        # Ensure user exists
+        user = await self.user_repository.get_user_by_id(request.user_id)
+        if not user:
+            user = User(
+                user_id=request.user_id,
+                learning_level=request.context.get('learning_level', 'intermediate') if request.context else 'intermediate'
+            )
+            await self.user_repository.create_user(user)
+        
+        # Create new conversation
         conversation = Conversation(
             id=conversation_id,
             user_id=request.user_id,

@@ -14,8 +14,8 @@ from ...application.dtos.chat_dtos import (
     ErrorResponse
 )
 from ...application.use_cases.chat_use_case import ChatUseCase
-from ...infrastructure.external.gemini_service import GeminiAIService
-from ...infrastructure.repositories.memory_conversation_repository import InMemoryConversationRepository
+from ...infrastructure.database.repositories import MongoUserRepository, MongoConversationRepository
+from ...infrastructure.external.ai_service_adapter import GeminiAIServiceAdapter
 from ...shared.config import settings
 from ...core.exceptions import (
     ConversationNotFoundException,
@@ -26,12 +26,13 @@ from ...core.exceptions import (
 logger = logging.getLogger(__name__)
 
 # Router for chat endpoints
-chat_router = APIRouter(prefix="/api/v1/chat", tags=["Chat"])
+chat_router = APIRouter(prefix="/chat", tags=["Chat"])
 
 # Dependencies - In production, use proper dependency injection
-conversation_repo = InMemoryConversationRepository()
-ai_service = GeminiAIService()
-chat_use_case = ChatUseCase(conversation_repo, ai_service)
+user_repo = MongoUserRepository()
+conversation_repo = MongoConversationRepository()
+ai_service = GeminiAIServiceAdapter()
+chat_use_case = ChatUseCase(user_repo, conversation_repo, ai_service)
 
 
 @chat_router.post("/start", response_model=ConversationResponse)
