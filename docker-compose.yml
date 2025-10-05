@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  chatbot-service:
+    build: .
+    container_name: vocabu-rex-chatbot-service
+    ports:
+      - "3006:3006"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
+      - SERVICE_HOST=0.0.0.0
+      - SERVICE_PORT=3006
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:8080}
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3006/api/v1/chat/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+# Optional: Add Redis for production conversation storage
+#  redis:
+#    image: redis:7-alpine
+#    container_name: vocabu-rex-redis
+#    ports:
+#      - "6379:6379"
+#    volumes:
+#      - redis_data:/data
+#    restart: unless-stopped
+
+#volumes:
+#  redis_data:
