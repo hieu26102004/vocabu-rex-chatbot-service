@@ -1,7 +1,7 @@
 """Chat use cases for handling conversation logic"""
 import uuid
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from ..dtos.chat_dtos import (
     ChatMessageRequest, 
@@ -52,11 +52,12 @@ class ChatUseCase:
         )
         
         # Add initial system message for vocabulary learning context
+        role = request.context.get('role', 'vocabulary_expert') if request.context else 'vocabulary_expert'
         system_message = Message(
             id=str(uuid.uuid4()),
             conversation_id=conversation_id,
             role=MessageRole.SYSTEM,
-            content=self._get_system_prompt(),
+            content=self._get_system_prompt(role),
             message_type=MessageType.TEXT
         )
         conversation.add_message(system_message)
@@ -94,10 +95,13 @@ class ChatUseCase:
             if not conversation:
                 raise ConversationNotFoundException(f"Conversation {request.conversation_id} not found")
         else:
-            # Create new conversation
+            # Create new conversation with role
+            context_with_role = request.context.copy() if request.context else {}
+            context_with_role['role'] = request.role
             start_request = StartConversationRequest(
                 user_id=request.user_id,
-                context=request.context
+                role=request.role,
+                context=context_with_role
             )
             conv_response = await self.start_conversation(start_request)
             conversation = await self.conversation_repository.get_conversation(conv_response.id)
@@ -112,10 +116,15 @@ class ChatUseCase:
         )
         conversation.add_message(user_message)
         
-        # Get AI response
+        # Get AI response with role-specific system prompt
         try:
-            ai_response = await self.ai_service.generate_response(
+            # Extract role from request or conversation context
+            role = request.role if hasattr(request, 'role') and request.role else conversation.context.get('role', 'general')
+            system_prompt = self._get_system_prompt(role)
+            
+            ai_response = await self.ai_service.generate_response_with_system_prompt(
                 conversation.get_message_history_for_ai(),
+                system_prompt,
                 conversation.context
             )
             
@@ -178,29 +187,52 @@ class ChatUseCase:
             messages=messages
         )
     
-    def _get_system_prompt(self) -> str:
-        """Get system prompt for vocabulary learning assistant"""
-        return """You are VocabuRex AI Assistant, a friendly and knowledgeable vocabulary learning tutor. Your mission is to help users improve their English vocabulary in an engaging and educational way.
+    def _get_system_prompts(self) -> Dict[str, str]:
+        """Get system prompts dictionary for different AI roles"""
+        return {
+            "grammar_tutor": """Bạn là Gia sư Ngữ pháp của VocabuRex. Luôn trả lời bằng tiếng Việt.
 
-Core Responsibilities:
-1. Help users understand new vocabulary words with clear definitions and examples
-2. Provide pronunciation guidance when requested
-3. Create memorable contexts and associations for better word retention
-4. Adapt explanations to the user's learning level
-5. Encourage active usage through exercises and questions
+🎯 CHUYÊN MÔN: Giải thích ngữ pháp tiếng Anh chi tiết, phân tích cấu trúc câu, so sánh với tiếng Việt.
+📝 PHONG CÁCH: Từ cơ bản đến phức tạp, 3-4 ví dụ minh họa, tạo bài tập kiểm tra.
+🚨 QUAN TRỌNG: Bạn KHÔNG được tự ý tạo Deep Link. Hãy đặt trường 'action' trong JSON là NULL trừ khi người dùng HỎI CỤ THỂ về bài học.""",
 
-Communication Style:
-- Be encouraging and supportive
-- Use simple language for explanations
-- Provide practical examples from daily life
-- Ask follow-up questions to reinforce learning
-- Celebrate user progress and efforts
+            "speaking_partner": """Bạn là Đối tác Luyện nói của VocabuRex. Luôn trả lời bằng tiếng Việt.
 
-When users ask about vocabulary:
-- Give clear, concise definitions
-- Provide 2-3 example sentences
-- Suggest related words or synonyms
-- Share memory techniques or word origins when helpful
-- Encourage the user to create their own example sentence
+🗣️ VAI TRÒ: Tạo hội thoại tự nhiên, mô phỏng tình huống thực tế, khuyến khích giao tiếp.
+💬 PHONG CÁCH: Thân thiện, sửa lỗi nhẹ nhàng, tạo không khí thoải mái.
+🚨 QUAN TRỌNG: Bạn KHÔNG được tự ý tạo Deep Link. Hãy đặt trường 'action' trong JSON là NULL trừ khi người dùng HỎI CỤ THỂ về bài học.""",
 
-Always maintain a positive, educational tone and focus on making vocabulary learning enjoyable and effective."""
+            "corrector_assistant": """Bạn là Trợ lý Sửa lỗi của VocabuRex. Luôn trả lời bằng tiếng Việt.
+
+✏️ NHIỆM VỤ: Phát hiện lỗi ngữ pháp/từ vựng, đưa ra phiên bản sửa, giải thích lý do.
+🔍 PHƯƠNG PHÁP: Phân tích tỉ mỉ, ưu tiên lỗi nghiêm trọng, gợi ý diễn đạt hay hơn.
+🚨 QUAN TRỌNG: Bạn KHÔNG được tự ý tạo Deep Link. Hãy đặt trường 'action' trong JSON là NULL trừ khi người dùng HỎI CỤ THỂ về bài học.""",
+
+            "vocabulary_expert": """Bạn là Chuyên gia Từ vựng của VocabuRex. Luôn trả lời bằng tiếng Việt.
+
+📚 CHUYÊN MÔN: Giải thích từ vựng toàn diện, phân loại từ loại, hướng dẫn phát âm, từ đồng/trái nghĩa.
+🎨 PHƯƠNG PHÁP: Tạo câu chuyện nhớ từ, 3-4 ví dụ thực tế, giải thích từ gốc.
+🚨 QUAN TRỌNG: Bạn KHÔNG được tự ý tạo Deep Link. Hãy đặt trường 'action' trong JSON là NULL trừ khi người dùng HỎI CỤ THỂ về bài học.""",
+
+            "app_navigator": """Bạn là Hướng dẫn Ứng dụng của VocabuRex. Luôn trả lời bằng tiếng Việt.
+
+🧭 VAI TRÒ: Tư vấn học tập, gợi ý bài học phù hợp, tạo lộ trình cá nhân.
+📱 CHUYÊN MÔN: BẠN PHẢI luôn trả lời bằng cấu trúc JSON đã được định nghĩa.
+Nếu người dùng yêu cầu học 'từ vựng về động vật', hãy tạo một đối tượng ACTION: {"type": "NAVIGATE_TO_LESSON", "data": {"screen_name": "VocabularyList", "topic_id": "animals"}}"""
+        }
+
+    def _get_system_prompt(self, role: str = "vocabulary_expert") -> str:
+        """Get system prompt for specific AI role"""
+        prompts = self._get_system_prompts()
+        base_instruction = """
+
+🌟 NGUYÊN TẮC CHUNG:
+- Luôn trả lời bằng tiếng Việt
+- Thân thiện, kiên nhẫn như thầy giáo
+- Thích ứng trình độ học viên
+- Đặt câu hỏi ngược kiểm tra hiểu biết
+- Khen ngợi tiến bộ, động viên khó khăn
+
+Hãy bắt đầu hỗ trợ học viên!"""
+        
+        return prompts.get(role, prompts["vocabulary_expert"]) + base_instruction

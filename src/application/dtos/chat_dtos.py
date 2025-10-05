@@ -9,6 +9,7 @@ class ChatMessageRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=1000, description="Chat message content")
     conversation_id: Optional[str] = Field(None, description="Existing conversation ID")
     user_id: Optional[str] = Field(None, description="User ID for conversation tracking")
+    role: Optional[str] = Field("vocabulary_expert", description="AI role: grammar_tutor, speaking_partner, corrector_assistant, vocabulary_expert, app_navigator")
     context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional context")
 
 
@@ -26,6 +27,7 @@ class StartConversationRequest(BaseModel):
     """Request model for starting a new conversation"""
     user_id: Optional[str] = Field(None, description="User ID")
     initial_message: Optional[str] = Field(None, description="Optional initial message")
+    role: Optional[str] = Field("vocabulary_expert", description="AI role: grammar_tutor, speaking_partner, corrector_assistant, vocabulary_expert, app_navigator")
     context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Initial context")
 
 

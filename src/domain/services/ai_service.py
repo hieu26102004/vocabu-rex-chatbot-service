@@ -16,6 +16,16 @@ class AIService(ABC):
         pass
     
     @abstractmethod
+    async def generate_response_with_system_prompt(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response with specific system prompt"""
+        pass
+    
+    @abstractmethod
     async def generate_conversation_title(self, first_message: str) -> str:
         """Generate a title for conversation based on first message"""
         pass

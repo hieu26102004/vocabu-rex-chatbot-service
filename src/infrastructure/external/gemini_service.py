@@ -58,6 +58,33 @@ class GeminiAIService:
             logger.error(f"Gemini API error: {str(e)}")
             raise GeminiAPIException(f"Failed to generate response: {str(e)}")
     
+    async def generate_response_with_system_prompt(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response using specific system prompt"""
+        try:
+            # Build prompt with custom system instruction
+            enhanced_prompt = self._build_prompt_with_system_instruction(
+                message_history, system_prompt, context
+            )
+            
+            # Call Gemini API in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                self._generate_sync_response, 
+                enhanced_prompt
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Gemini API error: {str(e)}")
+            raise GeminiAPIException(f"Failed to generate response: {str(e)}")
+
     def _generate_sync_response(self, prompt: str) -> str:
         """Synchronous call to Gemini API"""
         try:
@@ -120,6 +147,46 @@ Focus on making vocabulary learning engaging and memorable."""
 Conversation History:{conversation}
 
 Please provide a helpful, educational response that supports vocabulary learning. Be concise but thorough."""
+        
+        return full_prompt
+    
+    def _build_prompt_with_system_instruction(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_instruction: str,
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Build prompt with custom system instruction"""
+        
+        # Add context if available
+        context_info = ""
+        if context:
+            if "current_word" in context:
+                context_info += f"\nCurrent word being discussed: {context['current_word']}"
+            if "learning_level" in context:
+                context_info += f"\nUser's learning level: {context['learning_level']}"
+            if "topic" in context:
+                context_info += f"\nCurrent topic: {context['topic']}"
+        
+        # Build conversation history
+        conversation = ""
+        for msg in message_history[-10:]:  # Last 10 messages for context
+            role = msg.get('role', '')
+            content = msg.get('parts', [''])[0] if msg.get('parts') else msg.get('content', '')
+            
+            if role == 'user':
+                conversation += f"\nUser: {content}"
+            elif role in ['model', 'assistant']:
+                conversation += f"\nAssistant: {content}"
+        
+        # Combine all parts with custom system instruction
+        full_prompt = f"""{system_instruction}
+        
+{context_info}
+
+Conversation History:{conversation}
+
+Please provide a helpful response based on your role and the conversation context."""
         
         return full_prompt
     

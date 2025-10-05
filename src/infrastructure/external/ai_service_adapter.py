@@ -18,6 +18,17 @@ class GeminiAIServiceAdapter(AIService):
         """Generate AI response based on message history and context"""
         return await self.gemini_service.generate_response(message_history, context)
     
+    async def generate_response_with_system_prompt(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response with specific system prompt"""
+        return await self.gemini_service.generate_response_with_system_prompt(
+            message_history, system_prompt, context
+        )
+    
     async def generate_conversation_title(self, first_message: str) -> str:
         """Generate a title for conversation based on first message"""
         # Use first few words of the message or generate using AI
