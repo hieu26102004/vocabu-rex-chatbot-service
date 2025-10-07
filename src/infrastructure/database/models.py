@@ -1,18 +1,15 @@
 """MongoDB models using Beanie ODM"""
 from datetime import datetime
 from typing import List, Optional, Dict, Any
-from beanie import Document, Indexed
+from beanie import Document
 from pydantic import Field
 from pymongo import IndexModel
 
 
 class User(Document):
-    """User model for storing user information"""
+    """User model for storing user information - simplified for chat microservice"""
     user_id: str = Field(..., description="Unique user identifier")
-    email: Optional[str] = Field(None, description="User email")
-    username: Optional[str] = Field(None, description="Username")
     learning_level: str = Field("intermediate", description="User's learning level")
-    preferences: Dict[str, Any] = Field(default_factory=dict, description="User preferences")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
@@ -20,7 +17,6 @@ class User(Document):
         name = "users"
         indexes = [
             IndexModel([("user_id", 1)], unique=True),
-            IndexModel([("email", 1)], unique=True, sparse=True),
         ]
 
 

@@ -19,10 +19,7 @@ class MongoUserRepository(UserRepository):
         
         return UserEntity(
             user_id=user_doc.user_id,
-            email=user_doc.email,
-            username=user_doc.username,
             learning_level=user_doc.learning_level,
-            preferences=user_doc.preferences,
             created_at=user_doc.created_at,
             updated_at=user_doc.updated_at
         )
@@ -31,20 +28,14 @@ class MongoUserRepository(UserRepository):
         """Create new user"""
         user_doc = UserModel(
             user_id=user.user_id,
-            email=user.email,
-            username=user.username,
-            learning_level=user.learning_level,
-            preferences=user.preferences
+            learning_level=user.learning_level
         )
         await user_doc.insert()
         
         # Return updated entity with timestamps
         return UserEntity(
             user_id=user_doc.user_id,
-            email=user_doc.email,
-            username=user_doc.username,
             learning_level=user_doc.learning_level,
-            preferences=user_doc.preferences,
             created_at=user_doc.created_at,
             updated_at=user_doc.updated_at
         )
@@ -55,20 +46,14 @@ class MongoUserRepository(UserRepository):
         if not user_doc:
             raise ValueError(f"User {user.user_id} not found")
         
-        user_doc.email = user.email
-        user_doc.username = user.username
         user_doc.learning_level = user.learning_level
-        user_doc.preferences = user.preferences
         user_doc.updated_at = datetime.utcnow()
         
         await user_doc.save()
         
         return UserEntity(
             user_id=user_doc.user_id,
-            email=user_doc.email,
-            username=user_doc.username,
             learning_level=user_doc.learning_level,
-            preferences=user_doc.preferences,
             created_at=user_doc.created_at,
             updated_at=user_doc.updated_at
         )

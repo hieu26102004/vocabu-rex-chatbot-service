@@ -6,7 +6,6 @@ use('vocabu_rex_chatbot');
 
 // Create indexes for better performance
 db.users.createIndex({ "user_id": 1 }, { unique: true });
-db.users.createIndex({ "email": 1 }, { unique: true, sparse: true });
 
 db.chat_conversations.createIndex({ "conversation_id": 1 }, { unique: true });
 db.chat_conversations.createIndex({ "user_id": 1 });
