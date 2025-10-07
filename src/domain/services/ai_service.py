@@ -29,3 +29,45 @@ class AIService(ABC):
     async def generate_conversation_title(self, first_message: str) -> str:
         """Generate a title for conversation based on first message"""
         pass
+    
+    @abstractmethod
+    async def analyze_writing_vocabulary(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze vocabulary usage in writing"""
+        pass
+    
+    @abstractmethod
+    async def analyze_writing_grammar(
+        self,
+        writing_text: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze grammar in writing"""
+        pass
+    
+    @abstractmethod
+    async def analyze_writing_structure(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze structure and logic in writing"""
+        pass
+    
+    @abstractmethod
+    async def generate_detailed_feedback(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        vocabulary_analysis: str,
+        grammar_analysis: str,
+        structure_analysis: str,
+        language: str = "en"
+    ) -> str:
+        """Generate comprehensive detailed feedback"""
+        pass

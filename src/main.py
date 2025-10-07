@@ -8,8 +8,9 @@ from datetime import datetime
 
 from .presentation.controllers.chat_controller import chat_router
 from .presentation.controllers.deeplink_controller import deeplink_router
+from .infrastructure.factories.writing_assessment_factory import WritingAssessmentFactory
 from .shared.config import settings
-from .infrastructure.database_connection import connect_to_mongo, close_mongo_connection
+from .infrastructure.database_connection import connect_to_mongo, close_mongo_connection, get_database
 
 # Configure logging
 logging.basicConfig(
@@ -24,6 +25,13 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await connect_to_mongo()
+    
+    # Initialize writing assessment components
+    database = await get_database()
+    writing_assessment_factory = WritingAssessmentFactory(database)
+    writing_assessment_router = writing_assessment_factory.create_router()
+    app.include_router(writing_assessment_router, prefix="/api/v1")
+    
     logger.info("Application startup completed")
     yield
     await close_mongo_connection()
@@ -52,6 +60,7 @@ app.add_middleware(
 # Include routers
 app.include_router(chat_router)
 app.include_router(deeplink_router)
+# Writing assessment router is added dynamically in lifespan
 
 # Root endpoint
 @app.get("/")

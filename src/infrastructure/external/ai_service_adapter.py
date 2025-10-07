@@ -36,3 +36,48 @@ class GeminiAIServiceAdapter(AIService):
         if len(words) < 5:
             return " ".join(words)
         return " ".join(words) + "..."
+    
+    async def analyze_writing_vocabulary(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze vocabulary usage in writing"""
+        return await self.gemini_service.analyze_writing_vocabulary(
+            writing_text, writing_prompt, language
+        )
+    
+    async def analyze_writing_grammar(
+        self,
+        writing_text: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze grammar in writing"""
+        return await self.gemini_service.analyze_writing_grammar(writing_text, language)
+    
+    async def analyze_writing_structure(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze structure and logic in writing"""
+        return await self.gemini_service.analyze_writing_structure(
+            writing_text, writing_prompt, language
+        )
+    
+    async def generate_detailed_feedback(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        vocabulary_analysis: str,
+        grammar_analysis: str,
+        structure_analysis: str,
+        language: str = "en"
+    ) -> str:
+        """Generate comprehensive detailed feedback"""
+        return await self.gemini_service.generate_detailed_feedback(
+            writing_text, writing_prompt, vocabulary_analysis, 
+            grammar_analysis, structure_analysis, language
+        )

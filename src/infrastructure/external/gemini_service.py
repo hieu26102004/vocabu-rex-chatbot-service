@@ -211,3 +211,195 @@ Please provide a helpful response based on your role and the conversation contex
             return bool(response and response.text)
         except Exception:
             return False
+    
+    async def analyze_writing_vocabulary(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze vocabulary usage in writing"""
+        
+        prompt = f"""
+        Analyze the vocabulary usage in this writing assignment:
+        
+        WRITING PROMPT: {writing_prompt}
+        
+        STUDENT WRITING: {writing_text}
+        
+        Evaluate the vocabulary based on:
+        1. Vocabulary richness and variety (0-3 points)
+        2. Advanced vocabulary usage (0-3 points) 
+        3. Contextual appropriateness (0-2 points)
+        4. Word choice accuracy (0-2 points)
+        
+        Provide your analysis in JSON format:
+        {{
+            "score": 8.5,
+            "feedback": "Overall vocabulary usage analysis...",
+            "strengths": ["Strength 1", "Strength 2", "Strength 3"],
+            "weaknesses": ["Weakness 1", "Weakness 2", "Weakness 3"],
+            "advanced_words_used": ["word1", "word2", "word3"],
+            "vocabulary_level": "intermediate"
+        }}
+        
+        Be specific and constructive in your feedback.
+        """
+        
+        return await self.generate_response([{"role": "user", "parts": [prompt]}])
+    
+    async def analyze_writing_grammar(
+        self,
+        writing_text: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze grammar in writing"""
+        
+        prompt = f"""
+        Check and analyze grammar in this writing:
+        
+        TEXT: {writing_text}
+        
+        Identify and evaluate:
+        1. Sentence structure accuracy (0-3 points)
+        2. Verb tense consistency (0-2 points)  
+        3. Subject-verb agreement (0-2 points)
+        4. Preposition and article usage (0-2 points)
+        5. Punctuation accuracy (0-1 points)
+        
+        Provide detailed analysis in JSON format:
+        {{
+            "score": 7.5,
+            "feedback": "Grammar analysis overview...",
+            "strengths": ["Grammar strength 1", "Grammar strength 2"],
+            "weaknesses": ["Grammar issue 1", "Grammar issue 2"],
+            "error_count": {{
+                "tense_errors": 2,
+                "agreement_errors": 1,
+                "preposition_errors": 3,
+                "punctuation_errors": 2
+            }},
+            "major_errors": [
+                {{
+                    "error_text": "I have went",
+                    "corrected_text": "I have gone",
+                    "explanation": "Past participle of 'go' is 'gone'",
+                    "error_type": "verb_form"
+                }}
+            ]
+        }}
+        
+        Focus on the most important grammar issues.
+        """
+        
+        return await self.generate_response([{"role": "user", "parts": [prompt]}])
+    
+    async def analyze_writing_structure(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        language: str = "en"
+    ) -> str:
+        """Analyze structure and logic in writing"""
+        
+        prompt = f"""
+        Evaluate the structure and logic of this writing:
+        
+        WRITING PROMPT: {writing_prompt}
+        
+        STUDENT WRITING: {writing_text}
+        
+        Assess:
+        1. Overall coherence and flow (0-3 points)
+        2. Paragraph organization (0-2 points)
+        3. Logical progression of ideas (0-2 points)
+        4. Relevance to prompt requirements (0-2 points)
+        5. Introduction and conclusion effectiveness (0-1 points)
+        
+        Provide analysis in JSON format:
+        {{
+            "score": 8.0,
+            "feedback": "Structure analysis overview...",
+            "strengths": ["Structure strength 1", "Structure strength 2"],
+            "weaknesses": ["Structure issue 1", "Structure issue 2"],
+            "organization_score": 7.5,
+            "coherence_score": 8.0,
+            "prompt_adherence_score": 8.5,
+            "missing_elements": ["conclusion", "topic sentences"],
+            "suggestions": {{
+                "introduction": "Suggestion for intro improvement",
+                "body_paragraphs": "Suggestion for body improvement", 
+                "conclusion": "Suggestion for conclusion improvement",
+                "transitions": "Suggestion for better transitions"
+            }}
+        }}
+        
+        Be specific about structural improvements needed.
+        """
+        
+        return await self.generate_response([{"role": "user", "parts": [prompt]}])
+    
+    async def generate_detailed_feedback(
+        self,
+        writing_text: str,
+        writing_prompt: str,
+        vocabulary_analysis: str,
+        grammar_analysis: str,
+        structure_analysis: str,
+        language: str = "en"
+    ) -> str:
+        """Generate comprehensive detailed feedback"""
+        
+        prompt = f"""
+        Generate comprehensive feedback for this writing based on the analysis:
+        
+        WRITING PROMPT: {writing_prompt}
+        STUDENT WRITING: {writing_text}
+        
+        ANALYSIS RESULTS:
+        Vocabulary Analysis: {vocabulary_analysis}
+        Grammar Analysis: {grammar_analysis}
+        Structure Analysis: {structure_analysis}
+        
+        Generate detailed feedback in JSON format:
+        {{
+            "prompt_adherence": {{
+                "score": 8.5,
+                "feedback": "How well the writing addresses the prompt...",
+                "missed_requirements": ["requirement 1", "requirement 2"]
+            }},
+            "grammar_corrections": [
+                {{
+                    "error_text": "I have went to school",
+                    "corrected_text": "I have gone to school",
+                    "explanation": "Past participle of 'go' is 'gone', not 'went'",
+                    "error_type": "verb_form",
+                    "rule_reference": "Present perfect tense formation"
+                }}
+            ],
+            "vocabulary_enhancements": [
+                {{
+                    "original": "very good",
+                    "suggestion": "exceptional",
+                    "context_explanation": "More precise and academic",
+                    "example_sentence": "The research showed exceptional results.",
+                    "formality_level": "academic"
+                }}
+            ],
+            "structure_suggestions": {{
+                "introduction": "Consider adding a stronger thesis statement",
+                "body_paragraphs": "Use clearer topic sentences",
+                "conclusion": "Restate main points more effectively",
+                "transitions": "Add linking words between paragraphs"
+            }},
+            "overall_strengths": ["strength 1", "strength 2", "strength 3"],
+            "areas_for_improvement": ["area 1", "area 2", "area 3"],
+            "next_steps": ["step 1", "step 2", "step 3"],
+            "recommended_topics": ["grammar topic 1", "vocabulary topic 2"],
+            "difficulty_level": "intermediate"
+        }}
+        
+        Provide actionable, specific feedback that helps the student improve.
+        """
+        
+        return await self.generate_response([{"role": "user", "parts": [prompt]}])

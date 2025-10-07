@@ -24,3 +24,14 @@ class InvalidMessageException(ChatbotServiceException):
 class DeepLinkException(ChatbotServiceException):
     """Exception for deep link processing errors"""
     pass
+class ValidationError(ChatbotServiceException):
+    """Exception for validation errors"""
+    pass
+
+class ProcessingError(ChatbotServiceException):
+    """Exception for processing errors"""
+    pass
+
+class NotFoundError(ChatbotServiceException):
+    """Exception for not found errors"""
+    pass
