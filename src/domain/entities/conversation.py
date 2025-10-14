@@ -29,10 +29,8 @@ class Conversation:
         """Add a message to the conversation"""
         self.messages.append(message)
         self.updated_at = datetime.utcnow()
-        
-        # Update title based on first user message
-        if len(self.messages) == 1 and message.role.value == "user":
-            # Take first 50 characters as title
+        # Update title based on first user message (regardless of position)
+        if message.role.value == "user" and self.title == "New Conversation":
             self.title = message.content[:50] + "..." if len(message.content) > 50 else message.content
     
     def get_recent_messages(self, limit: int = 10) -> List[Message]:

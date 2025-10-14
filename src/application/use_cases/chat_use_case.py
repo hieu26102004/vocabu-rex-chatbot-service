@@ -62,16 +62,6 @@ class ChatUseCase:
         )
         conversation.add_message(system_message)
         
-        # Add initial user message if provided
-        if request.initial_message:
-            user_message = Message(
-                id=str(uuid.uuid4()),
-                conversation_id=conversation_id,
-                role=MessageRole.USER,
-                content=request.initial_message,
-                message_type=MessageType.TEXT
-            )
-            conversation.add_message(user_message)
         
         # Save conversation
         saved_conversation = await self.conversation_repository.create_conversation(conversation)
