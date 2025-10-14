@@ -26,6 +26,7 @@ from ...domain.entities.writing_assessment import (
 from ...domain.repositories.writing_assessment_repository import WritingAssessmentRepository
 from ...domain.services.ai_service import AIService
 from ...core.exceptions import ValidationError, ProcessingError, NotFoundError
+from ...shared.config import settings
 
 
 class WritingAssessmentUseCase:
@@ -222,7 +223,7 @@ class WritingAssessmentUseCase:
             )
             
             assessment.add_ai_interaction(
-                "Vocabulary analysis request", response, "gemini-pro"
+                "Vocabulary analysis request", response, settings.gemini_model
             )
             
             # Parse AI response
@@ -257,7 +258,7 @@ class WritingAssessmentUseCase:
             )
             
             assessment.add_ai_interaction(
-                "Grammar analysis request", response, "gemini-pro"
+                "Grammar analysis request", response, settings.gemini_model
             )
             
             # Parse AI response 
@@ -292,7 +293,7 @@ class WritingAssessmentUseCase:
             )
             
             assessment.add_ai_interaction(
-                "Structure analysis request", response, "gemini-pro"
+                "Structure analysis request", response, settings.gemini_model
             )
             
             # Parse AI response
@@ -345,7 +346,7 @@ class WritingAssessmentUseCase:
             )
             
             assessment.add_ai_interaction(
-                "Detailed feedback generation", feedback_response, "gemini-pro"
+                "Detailed feedback generation", feedback_response, settings.gemini_model
             )
             
             # Parse detailed feedback response
@@ -422,7 +423,7 @@ class WritingAssessmentUseCase:
             criterion_scores=[vocabulary_score, grammar_score, structure_score],
             detailed_feedback=detailed_feedback,
             assessment_time_seconds=30.0,  # Mock value
-            ai_model_used="gemini-pro"
+            ai_model_used=settings.gemini_model
         )
     
     # Helper methods for validation and mapping

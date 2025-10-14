@@ -30,7 +30,11 @@ async def lifespan(app: FastAPI):
     database = await get_database()
     writing_assessment_factory = WritingAssessmentFactory(database)
     writing_assessment_router = writing_assessment_factory.create_router()
-    app.include_router(writing_assessment_router, prefix="/api/v1")
+
+    # Initialize all routers after database connection
+    app.include_router(chat_router)
+    app.include_router(deeplink_router)
+    app.include_router(writing_assessment_router)
     
     logger.info("Application startup completed")
     yield
@@ -57,10 +61,7 @@ app.add_middleware(
 
 
 
-# Include routers
-app.include_router(chat_router)
-app.include_router(deeplink_router)
-# Writing assessment router is added dynamically in lifespan
+# All routers are included in lifespan for consistency
 
 # Root endpoint
 @app.get("/")

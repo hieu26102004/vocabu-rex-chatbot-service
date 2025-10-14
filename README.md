@@ -39,7 +39,7 @@ GEMINI_API_KEY=your_actual_gemini_api_key_here
 pip install -r requirements.txt
 
 # Run the service
-python -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+python -m uvicorn src.main:app --host 0.0.0.0 --port 3006 --reload
 
 # API Documentation available at: http://localhost:8000/docs
 ```

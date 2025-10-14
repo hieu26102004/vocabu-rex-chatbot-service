@@ -89,12 +89,14 @@ class GeminiAIService:
         """Synchronous call to Gemini API"""
         try:
             response = self.model.generate_content(prompt)
-            
-            if not response or not response.text:
+            # Prefer response.parts if available
+            if not response or not hasattr(response, "parts") or not response.parts:
                 raise GeminiAPIException("Empty response from Gemini API")
-            
-            return response.text.strip()
-            
+            # Join all text parts
+            text = "\n".join([part.text for part in response.parts if hasattr(part, "text")])
+            if not text.strip():
+                raise GeminiAPIException("Empty response text from Gemini API")
+            return text.strip()
         except Exception as e:
             raise GeminiAPIException(f"Gemini API call failed: {str(e)}")
     

@@ -100,11 +100,11 @@ class DetailedFeedbackResponse(BaseModel):
 
 class AssessmentResultResponse(BaseModel):
     """Assessment result response"""
+    ai_model_used: str
     overall_score: float
     max_score: float = 10.0
     criterion_scores: List[CriterionScoreResponse] = []
     assessment_time_seconds: float = 0.0
-    ai_model_used: str = "gemini-pro"
 
 
 class WritingAssessmentResponse(BaseModel):

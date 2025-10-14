@@ -103,6 +103,7 @@ class AssessmentResult:
     
     # Scores
     overall_score: float
+    ai_model_used: str
     criterion_scores: List[CriterionScore] = field(default_factory=list)
     
     # Detailed feedback
@@ -110,7 +111,6 @@ class AssessmentResult:
     
     # Metadata
     assessment_time_seconds: float = 0.0
-    ai_model_used: str = "gemini-pro"
     
     def get_score_by_criterion(self, criterion: ScoreCriterion) -> Optional[CriterionScore]:
         """Get score for specific criterion"""
