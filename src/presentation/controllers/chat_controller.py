@@ -1,6 +1,6 @@
 from typing import List
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
 from fastapi.responses import JSONResponse
 import logging
 
@@ -14,7 +14,8 @@ from ...application.dtos.chat_dtos import (
     ErrorResponse
 )
 from ...application.use_cases.chat_use_case import ChatUseCase
-from ...infrastructure.database.repositories import MongoUserRepository, MongoConversationRepository
+from ...infrastructure.repositories.user_repository import UserRepository
+from ...infrastructure.repositories.conversation_repository import ConversationRepository
 from ...infrastructure.external.ai_service_adapter import GeminiAIServiceAdapter
 from ...shared.config import settings
 from ...core.exceptions import (
@@ -30,8 +31,8 @@ chat_router = APIRouter(prefix="/chat", tags=["Chat"])
 
 # Dependency provider for ChatUseCase
 def get_chat_use_case():
-    user_repo = MongoUserRepository()
-    conversation_repo = MongoConversationRepository()
+    user_repo = UserRepository()
+    conversation_repo = ConversationRepository()
     ai_service = GeminiAIServiceAdapter()
     return ChatUseCase(user_repo, conversation_repo, ai_service)
 
@@ -39,9 +40,9 @@ def get_chat_use_case():
 def get_ai_service():
     return GeminiAIServiceAdapter()
 # Endpoint: Lấy danh sách conversation của user
-@chat_router.get("/user/{user_id}/conversations", response_model=List[ConversationResponse])
+@chat_router.get("/user/conversations", response_model=List[ConversationResponse])
 async def get_user_conversations(
-    user_id: str,
+    user_id: str = Header(..., alias="x-user-id"),
     chat_use_case: ChatUseCase = Depends(get_chat_use_case)
 ):
     try:
@@ -146,8 +147,10 @@ async def update_conversation(
 @chat_router.post("/start", response_model=ConversationResponse)
 async def start_conversation(
     request: StartConversationRequest,
+    user_id: str = Header(..., alias="x-user-id"),
     chat_use_case: ChatUseCase = Depends(get_chat_use_case)
 ):
+    request.user_id = user_id
     """Start a new conversation"""
     try:
         logger.info(f"Starting new conversation for user: {request.user_id}")
@@ -164,8 +167,10 @@ async def start_conversation(
 @chat_router.post("/message", response_model=ChatMessageResponse)
 async def send_message(
     request: ChatMessageRequest,
+    user_id: str = Header(..., alias="x-user-id"),
     chat_use_case: ChatUseCase = Depends(get_chat_use_case)
 ):
+    request.user_id = user_id
     """Send a message and get AI response"""
     try:
         logger.info(f"Processing message for conversation: {request.conversation_id}")

@@ -10,7 +10,8 @@ from ...application.dtos.chat_dtos import (
     ChatMessageResponse
 )
 from ...application.use_cases.chat_use_case import ChatUseCase
-from ...infrastructure.database.repositories import MongoUserRepository, MongoConversationRepository
+from ...infrastructure.repositories.user_repository import UserRepository
+from ...infrastructure.repositories.conversation_repository import ConversationRepository
 from ...infrastructure.external.ai_service_adapter import GeminiAIServiceAdapter
 
 logger = logging.getLogger(__name__)
@@ -19,8 +20,8 @@ logger = logging.getLogger(__name__)
 deeplink_router = APIRouter(prefix="/deeplink", tags=["Deep Links"])
 
 # Dependencies - In production, use proper dependency injection
-user_repo = MongoUserRepository()
-conversation_repo = MongoConversationRepository()
+user_repo = UserRepository()
+conversation_repo = ConversationRepository()
 ai_service = GeminiAIServiceAdapter()
 chat_use_case = ChatUseCase(user_repo, conversation_repo, ai_service)
 
