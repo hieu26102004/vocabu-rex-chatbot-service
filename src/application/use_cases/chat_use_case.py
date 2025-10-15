@@ -10,12 +10,14 @@ from ..dtos.chat_dtos import (
     ConversationResponse,
     ConversationHistoryResponse
 )
+
 from ...domain.entities.conversation import Conversation
 from ...domain.entities.message import Message, MessageRole, MessageType
 from ...domain.entities.user import User
-from ...domain.repositories.chat_repositories import UserRepository, ConversationRepository
 from ...domain.services.ai_service import AIService
 from ...core.exceptions import ConversationNotFoundException, InvalidMessageException
+from ...domain.repositories.user_repository import UserRepository
+from ...domain.repositories.conversation_repository import ConversationRepository
 
 
 class ChatUseCase:

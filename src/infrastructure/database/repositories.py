@@ -4,7 +4,8 @@ from datetime import datetime
 
 from ...domain.entities.user import User as UserEntity
 from ...domain.entities.conversation import Conversation as ConversationEntity
-from ...domain.repositories.chat_repositories import UserRepository, ConversationRepository
+from ...domain.repositories.user_repository import UserRepository
+from ...domain.repositories.conversation_repository import ConversationRepository
 from .models import User as UserModel, ChatConversation, ChatMessage
 
 

@@ -15,10 +15,10 @@ from ...domain.entities.writing_assessment import (
     ScoreCriterion,
     AssessmentStatus
 )
-from ...domain.repositories.writing_assessment_repository import WritingAssessmentRepository
+from ...domain.repositories.writing_assessment_repository import WritingAssessmentRepository as WritingAssessmentRepositoryInterface
 
 
-class MongoWritingAssessmentRepository(WritingAssessmentRepository):
+class WritingAssessmentRepository(WritingAssessmentRepositoryInterface):
     """MongoDB implementation of writing assessment repository"""
     
     def __init__(self, collection: AsyncIOMotorCollection):

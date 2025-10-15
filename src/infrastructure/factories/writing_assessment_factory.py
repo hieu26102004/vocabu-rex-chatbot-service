@@ -2,7 +2,7 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from ...application.use_cases.writing_assessment_use_case import WritingAssessmentUseCase
-from ..repositories.mongo_writing_assessment_repository import MongoWritingAssessmentRepository
+from ..repositories.writing_assessment_repository import WritingAssessmentRepository
 from ..external.ai_service_adapter import GeminiAIServiceAdapter
 from ...presentation.controllers.writing_assessment_controller import create_writing_assessment_router
 
@@ -14,7 +14,7 @@ class WritingAssessmentFactory:
         self.database = database
         
         # Initialize repository
-        self.assessment_repository = MongoWritingAssessmentRepository(
+        self.assessment_repository = WritingAssessmentRepository(
             database.writing_assessments
         )
         
