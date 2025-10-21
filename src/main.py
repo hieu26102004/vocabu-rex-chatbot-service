@@ -10,6 +10,7 @@ from .presentation.controllers.chat_controller import chat_router
 from .presentation.controllers.deeplink_controller import deeplink_router
 from .infrastructure.factories.writing_assessment_factory import WritingAssessmentFactory
 from .infrastructure.factories.image_description_factory import ImageDescriptionScoringFactory
+from .infrastructure.factories.exercise_scoring_factory import ExerciseScoringFactory
 from .shared.config import settings
 from .infrastructure.database_connection import connect_to_mongo, close_mongo_connection, get_database
 
@@ -35,12 +36,17 @@ async def lifespan(app: FastAPI):
     # Initialize image description scoring components
     image_description_factory = ImageDescriptionScoringFactory(database)
     image_description_router = image_description_factory.create_router()
+    
+    # Initialize exercise scoring components
+    exercise_scoring_factory = ExerciseScoringFactory(database)
+    exercise_scoring_router = exercise_scoring_factory.create_router()
 
     # Initialize all routers after database connection
     app.include_router(chat_router)
     app.include_router(deeplink_router)
     app.include_router(writing_assessment_router)
     app.include_router(image_description_router)
+    app.include_router(exercise_scoring_router)
     
     logger.info("Application startup completed")
     yield
