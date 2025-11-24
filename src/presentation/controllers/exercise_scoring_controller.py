@@ -17,7 +17,7 @@ class ExerciseScoringController:
     
     def __init__(self, scoring_use_case: ExerciseScoringUseCase):
         self.scoring_use_case = scoring_use_case
-        self.router = APIRouter(prefix="/chat/exercise-scoring", tags=["Exercise Scoring"])
+        self.router = APIRouter(prefix="/exercise-scoring", tags=["Exercise Scoring"])
         self._setup_routes()
     
     def _setup_routes(self):
