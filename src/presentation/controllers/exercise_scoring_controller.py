@@ -4,7 +4,9 @@ from typing import Optional
 
 from ...application.dtos.exercise_scoring_dtos import (
     WritingPromptScoreRequest,
-    WritingPromptScoreResponse
+    WritingPromptScoreResponse,
+    TranslateScoreRequest,
+    TranslateScoreResponse
 )
 from ...application.use_cases.exercise_scoring_use_case import ExerciseScoringUseCase
 from ...core.exceptions import ValidationError, ProcessingError
@@ -32,6 +34,29 @@ class ExerciseScoringController:
             """Score writing prompt exercise"""
             try:
                 result = await self.scoring_use_case.score_writing_prompt(request)
+                return result
+            except ValidationError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(e)
+                )
+            except ProcessingError as e:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=str(e)
+                )
+        
+        @self.router.post(
+            "/translate/score",
+            response_model=TranslateScoreResponse,
+            status_code=status.HTTP_200_OK,
+            summary="Score translate exercise",
+            description="Score a translate exercise with user answer, source text, and correct answer"
+        )
+        async def score_translate(request: TranslateScoreRequest):
+            """Score translate exercise"""
+            try:
+                result = await self.scoring_use_case.score_translate(request)
                 return result
             except ValidationError as e:
                 raise HTTPException(

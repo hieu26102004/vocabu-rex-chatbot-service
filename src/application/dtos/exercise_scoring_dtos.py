@@ -16,3 +16,17 @@ class WritingPromptScoreResponse(BaseModel):
     score_percentage: float = Field(..., ge=0.0, le=100.0, description="Score as percentage (0-100)")
     feedback: str = Field(..., description="Brief feedback comment")
     performance_level: str = Field(..., description="excellent/good/satisfactory/needs_improvement/poor")
+
+
+class TranslateScoreRequest(BaseModel):
+    """Request to score a translate exercise"""
+    user_answer: str = Field(..., min_length=1, max_length=500, description="User's translation answer")
+    source_text: str = Field(..., min_length=1, max_length=500, description="Original text to translate")
+    correct_answer: str = Field(..., min_length=1, max_length=500, description="Correct translation")
+    language: str = Field("en", pattern="^(en|vi)$", description="Target language code (en/vi)")
+
+
+class TranslateScoreResponse(BaseModel):
+    """Response for translate scoring"""
+    is_correct: bool = Field(..., description="Whether the translation is correct")
+    feedback: str = Field(..., description="Short feedback comment")

@@ -5,7 +5,7 @@
 ## Features
 
 - **Real AI Integration**: Uses Google Gemini API (NO MOCK DATA)
-- **Clean Architecture**: Maintainable and scalable code structure  
+- **Clean Architecture**: Maintainable and scalable code structure
 - **Deep Link Support**: Seamless integration with Flutter app
 - **Vocabulary-Focused**: Specialized prompts for English learning
 - **Conversation Management**: Persistent chat sessions with context
@@ -58,19 +58,27 @@ curl http://localhost:8000/api/v1/chat/health
 
 ### Chat Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/chat/start` | Start new conversation |
-| POST | `/api/v1/chat/message` | Send message and get AI response |
-| GET | `/api/v1/chat/conversation/{id}/history` | Get conversation history |
-| GET | `/api/v1/chat/health` | Health check |
+| Method | Endpoint                                 | Description                      |
+| ------ | ---------------------------------------- | -------------------------------- |
+| POST   | `/api/v1/chat/start`                     | Start new conversation           |
+| POST   | `/api/v1/chat/message`                   | Send message and get AI response |
+| GET    | `/api/v1/chat/conversation/{id}/history` | Get conversation history         |
+| GET    | `/api/v1/chat/health`                    | Health check                     |
 
 ### Deep Link Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/v1/deeplink/vocabulary` | Handle vocabulary word assistance |
-| POST | `/api/v1/deeplink/process` | Process general deep links |
+| Method | Endpoint                      | Description                       |
+| ------ | ----------------------------- | --------------------------------- |
+| POST   | `/api/v1/deeplink/vocabulary` | Handle vocabulary word assistance |
+| POST   | `/api/v1/deeplink/process`    | Process general deep links        |
+
+### Exercise Scoring Endpoints
+
+| Method | Endpoint                                    | Description                       |
+| ------ | ------------------------------------------- | --------------------------------- |
+| POST   | `/exercise-scoring/writing-prompt/score`    | Score writing prompt exercises    |
+| POST   | `/exercise-scoring/translate/score`         | Score translation exercises       |
+| POST   | `/exercise-scoring/image-description/score` | Score image description exercises |
 
 ## Usage Examples
 
@@ -112,6 +120,36 @@ curl -X POST "http://localhost:8000/api/v1/deeplink/vocabulary" \
   }'
 ```
 
+### 4. Score Translation Exercise
+
+```bash
+curl -X POST "http://localhost:8003/exercise-scoring/translate/score" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_answer": "Tôi ăn sáng",
+    "source_text": "I eat breakfast",
+    "correct_answer": "Tôi ăn sáng",
+    "language": "vi"
+  }'
+```
+
+**Response:**
+
+```json
+{
+  "is_correct": true,
+  "feedback": "Perfect! Your translation is exactly correct."
+}
+```
+
+### 5. Test Translation Scoring
+
+Use the provided PowerShell test script:
+
+```powershell
+.\test-translate-api.ps1
+```
+
 ## Flutter Integration
 
 ### Deep Link Configuration
@@ -126,7 +164,7 @@ Add to your Flutter app's `android/app/src/main/AndroidManifest.xml`:
         <action android:name="android.intent.action.VIEW" />
         <category android:name="android.intent.category.DEFAULT" />
         <category android:name="android.intent.category.BROWSABLE" />
-        <data android:scheme="vocaburex" 
+        <data android:scheme="vocaburex"
               android:host="chatbot" />
     </intent-filter>
 </activity>
@@ -176,13 +214,13 @@ src/
 
 ## Environment Variables
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `GEMINI_API_KEY` | **Required** Google Gemini API key | - |
-| `GEMINI_MODEL` | Gemini model name | `gemini-1.5-flash` |
-| `SERVICE_PORT` | Service port | `8000` |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `ALLOWED_ORIGINS` | CORS allowed origins | `http://localhost:3000,http://localhost:8080` |
+| Variable          | Description                        | Default                                       |
+| ----------------- | ---------------------------------- | --------------------------------------------- |
+| `GEMINI_API_KEY`  | **Required** Google Gemini API key | -                                             |
+| `GEMINI_MODEL`    | Gemini model name                  | `gemini-1.5-flash`                            |
+| `SERVICE_PORT`    | Service port                       | `8000`                                        |
+| `LOG_LEVEL`       | Logging level                      | `INFO`                                        |
+| `ALLOWED_ORIGINS` | CORS allowed origins               | `http://localhost:3000,http://localhost:8080` |
 
 ## Production Deployment
 
@@ -190,7 +228,7 @@ src/
 
 ```yaml
 # docker-compose.prod.yml
-version: '3.8'
+version: "3.8"
 services:
   chatbot-service:
     build: .
@@ -249,15 +287,19 @@ flake8 src/
 ### Common Issues
 
 1. **Gemini API Key Error**
+
    ```
    GeminiAPIException: Gemini API key not configured
    ```
+
    **Solution**: Set `GEMINI_API_KEY` in `.env` file
 
 2. **Import Error**
+
    ```
    ModuleNotFoundError: No module named 'google.generativeai'
    ```
+
    **Solution**: `pip install google-generativeai`
 
 3. **CORS Error**
