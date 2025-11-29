@@ -1,5 +1,5 @@
 """Exercise scoring use case for learning service integration"""
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from ..dtos.exercise_scoring_dtos import (
     WritingPromptScoreRequest,
     WritingPromptScoreResponse,
@@ -28,8 +28,8 @@ class ExerciseScoringUseCase:
             max_words = exercise_meta.get('maxWords', 100)
             prompt = exercise_meta.get('prompt', '')
             
-            # Calculate score using simple rule-based approach
-            score_result = self._calculate_score(
+            # Calculate score using AI-powered approach
+            score_result = await self._calculate_score(
                 request.user_answer,
                 exercise_meta
             )
@@ -50,8 +50,8 @@ class ExerciseScoringUseCase:
             # Validate request
             self._validate_translate_request(request)
             
-            # Calculate translation accuracy
-            score_result = self._calculate_translation_score(
+            # Calculate translation accuracy using AI
+            score_result = await self._calculate_translation_score(
                 request.user_answer,
                 request.source_text,
                 request.correct_answer
@@ -84,87 +84,409 @@ class ExerciseScoringUseCase:
         if not request.exercise_meta:
             raise ValidationError("Exercise metadata is required")
         
-        required_meta_fields = ['prompt', 'minWords', 'maxWords', 'exampleAnswer']
+        required_meta_fields = ['prompt', 'minWords', 'maxWords']
         for field in required_meta_fields:
             if field not in request.exercise_meta:
                 raise ValidationError(f"Exercise metadata missing required field: {field}")
     
-    def _calculate_score(self, user_answer: str, exercise_meta: Dict[str, Any]) -> Dict[str, Any]:
-        """Simple scoring logic based on prompt and example answer"""
+    async def _calculate_score(self, user_answer: str, exercise_meta: Dict[str, Any]) -> Dict[str, Any]:
+        """AI-powered scoring logic for writing exercises"""
         min_words = exercise_meta.get('minWords', 30)
         max_words = exercise_meta.get('maxWords', 100)
+        prompt = exercise_meta.get('prompt', '')
+        criteria = exercise_meta.get('criteria', [])
         example_answer = exercise_meta.get('exampleAnswer', '')
+        
+        # Use AI to score the writing
+        ai_result = await self._score_writing_with_ai(user_answer, prompt, criteria, min_words, max_words, example_answer)
+        
+        return ai_result
+    
+    def _calculate_content_criteria(self, user_answer: str, exercise_meta: Dict[str, Any]) -> Tuple[int, float]:
+        """Calculate content score based on meeting exercise criteria
+
+        Returns a tuple of (content_score_out_of_40, criteria_ratio)
+        """
+        criteria = exercise_meta.get('criteria', [])
         prompt = exercise_meta.get('prompt', '')
         
-        words = user_answer.strip().split()
-        word_count = len(words)
+        if not criteria:
+            # Fallback to basic prompt relevance if no criteria provided
+            return self._calculate_prompt_relevance(user_answer, prompt)
         
-        # Word count score (40 points) - encourage longer writing but don't require min_words
-        if word_count >= max_words:
-            word_score = 35  # Slightly penalize for being too long
-        elif word_count >= min_words:
-            word_score = 40  # Perfect score for meeting target range
-        elif word_count >= min_words * 0.7:
-            word_score = 35  # Good score for reasonable length
-        elif word_count >= min_words * 0.5:
-            word_score = 30  # Decent score for moderate length
-        elif word_count >= 10:
-            word_score = 25  # Basic score for having some content
-        else:
-            word_score = 15  # Minimum score for very short answers
+        criteria_met = 0
+        total_criteria = len(criteria)
         
-        # Content similarity score (40 points) - compare with example answer
-        content_score = self._calculate_content_similarity(user_answer, example_answer, prompt)
+        for criterion in criteria:
+            if self._check_criterion(user_answer, criterion.lower()):
+                criteria_met += 1
         
-        # Basic grammar score (20 points)
-        grammar_score = 20
-        if not user_answer.strip().endswith(('.', '!', '?')):
-            grammar_score -= 5
-        if not user_answer[0].isupper():
-            grammar_score -= 5
-            
-        # Total score
-        total_score = word_score + content_score + grammar_score
+        # Calculate ratio and score
+        criteria_ratio = criteria_met / total_criteria if total_criteria > 0 else 0.0
+        content_score = int(criteria_ratio * 40)
         
-        # Determine result
-        is_correct = total_score >= 60
-        performance_level = self._get_performance_level(total_score)
-        feedback = self._get_feedback(total_score, word_count, min_words, max_words, content_score)
+        # Bonus for addressing the prompt topic directly
+        prompt_words = set(word.lower() for word in prompt.split() if len(word) > 2)
+        user_words = set(word.lower() for word in user_answer.split() if len(word) > 2)
+        prompt_overlap = len(user_words.intersection(prompt_words))
         
-        return {
-            'is_correct': is_correct,
-            'score_percentage': float(total_score),
-            'feedback': feedback,
-            'performance_level': performance_level
-        }
+        if prompt_overlap >= 2:  # User mentions key prompt words
+            content_score += 5
+        
+        return min(40, content_score), criteria_ratio
     
-    def _calculate_content_similarity(self, user_answer: str, example_answer: str, prompt: str) -> int:
-        """Calculate content similarity based on keywords and topics"""
-        # Extract key words from example answer and prompt
-        example_words = set(word.lower() for word in example_answer.split() if len(word) > 2)
+    def _check_criterion(self, user_answer: str, criterion: str) -> bool:
+        """Check if user answer meets a specific criterion"""
+        user_lower = user_answer.lower()
+        
+        if 'simple sentences' in criterion or 'simple sentence' in criterion:
+            # Check for simple sentence structure (short sentences, basic conjunctions)
+            sentences = user_answer.split('.')
+            sentences = [s.strip() for s in sentences if s.strip()]
+            
+            # Consider it simple if most sentences are reasonably short
+            simple_count = 0
+            for sentence in sentences:
+                words = sentence.split()
+                # Simple sentences: 3-15 words, not too many complex conjunctions
+                if 3 <= len(words) <= 15:
+                    complex_words = ['however', 'nevertheless', 'furthermore', 'consequently', 'therefore']
+                    if not any(word in sentence.lower() for word in complex_words):
+                        simple_count += 1
+            
+            return simple_count >= len(sentences) * 0.5 or len(sentences) <= 2  # At least 50% simple sentences, or just 1-2 sentences total
+        
+        elif 'basic vocabulary' in criterion or 'simple vocabulary' in criterion:
+            # Check for basic/common words (avoid overly complex vocabulary)
+            words = user_answer.split()
+            # Very basic check: avoid words longer than 10 characters as proxy for complexity
+            complex_words = [word for word in words if len(word) > 10]
+            return len(complex_words) <= len(words) * 0.2  # Less than 20% complex words (more lenient)
+        
+        elif 'personal experience' in criterion or 'personal' in criterion:
+            # Check for first-person pronouns and personal experience indicators
+            personal_indicators = ['i ', 'my ', 'me ', 'myself', 'i\'m', 'i\'ve', 'i\'ll', 'i\'d']
+            return any(indicator in user_lower for indicator in personal_indicators)
+        
+        elif 'opinion' in criterion or 'thoughts' in criterion:
+            # Check for opinion expressions
+            opinion_indicators = ['i think', 'i believe', 'in my opinion', 'i feel', 'i like', 'i don\'t like', 'i prefer']
+            return any(indicator in user_lower for indicator in opinion_indicators)
+        
+        else:
+            # For unknown criteria, check if the criterion words appear in the answer
+            criterion_words = criterion.split()
+            return any(word in user_lower for word in criterion_words if len(word) > 2)
+    
+    def _calculate_prompt_relevance(self, user_answer: str, prompt: str) -> Tuple[int, float]:
+        """Fallback function for prompt relevance when no criteria provided"""
         prompt_words = set(word.lower() for word in prompt.split() if len(word) > 2)
         user_words = set(word.lower() for word in user_answer.split() if len(word) > 2)
         
-        # Combine important words from example and prompt
-        important_words = example_words.union(prompt_words)
+        if len(prompt_words) == 0:
+            return 20, 0.5  # Default score and ratio
         
-        # Calculate overlap
-        if len(important_words) == 0:
-            return 20  # Default score if no comparison possible
+        overlap_count = len(user_words.intersection(prompt_words))
+        relevance_ratio = overlap_count / len(prompt_words)
+        content_score = int(relevance_ratio * 40)
+        
+        return min(40, content_score), relevance_ratio
+    
+    async def _score_writing_with_ai(self, user_answer: str, prompt: str, criteria: list, min_words: int, max_words: int, example_answer: str) -> Dict[str, Any]:
+        """Use AI to score writing exercise"""
+        try:
+            # Prepare context for AI
+            criteria_text = ", ".join(criteria) if criteria else "general writing quality"
             
-        overlap_count = len(user_words.intersection(important_words))
-        similarity_ratio = overlap_count / len(important_words)
+            # Create system prompt
+            system_prompt = f"""You are a teacher grading writing exercises. Evaluate student responses fairly and encouragingly.
+
+Return your evaluation in JSON format:
+{{
+  "score_percentage": 85,
+  "is_correct": true,
+  "performance_level": "good",
+  "feedback": "Your response shows good understanding..."
+}}
+
+Be lenient and focus on content quality over length. Accept short answers if they demonstrate understanding of the topic."""
+            
+            # Create user message
+            user_message = f"""Evaluate this writing response:
+
+Prompt: {prompt}
+Criteria: {criteria_text}
+Word range: {min_words}-{max_words} words
+Example answer: {example_answer}
+
+Student response: {user_answer}
+
+Please evaluate and provide:
+1. Score out of 100
+2. Whether it's correct (true/false) - be lenient, accept answers that meet basic criteria even if short
+3. Performance level (excellent/good/satisfactory/needs_improvement/poor)
+4. Detailed feedback"""
+            
+            message_history = [{"role": "user", "content": user_message}]
+            
+            # Retry logic for AI calls (same as image description service)
+            import asyncio
+            max_retries = 3
+            ai_response = None
+            
+            for attempt in range(max_retries):
+                try:
+                    # Call AI service with system prompt
+                    ai_response = await self.ai_service.generate_response_with_system_prompt(
+                        message_history=message_history,
+                        system_prompt=system_prompt
+                    )
+                    
+                    # Check if response is valid
+                    if ai_response and len(ai_response.strip()) > 10:
+                        break
+                    else:
+                        raise ValueError("Empty or too short response from AI")
+                        
+                except Exception as e:
+                    print(f"AI attempt {attempt + 1} failed: {str(e)}")
+                    if attempt == max_retries - 1:
+                        # Last attempt failed, raise the error
+                        raise
+                    
+                    # Wait briefly before retry
+                    await asyncio.sleep(0.5)
+            # Log the AI response for debugging
+            print(f"AI Response: {ai_response}")
+            print(f"AI Response type: {type(ai_response)}")
+            
+            # Handle different response types from AI service
+            if isinstance(ai_response, str):
+                # Try to parse as JSON if it's a string
+                import json
+                try:
+                    # Find JSON content (look for first { to last })
+                    start_idx = ai_response.find('{')
+                    end_idx = ai_response.rfind('}')
+                    
+                    if start_idx != -1 and end_idx != -1:
+                        json_str = ai_response[start_idx:end_idx + 1]
+                        result = json.loads(json_str)
+                    else:
+                        # If no JSON found, parse as text
+                        result = self._parse_text_response(ai_response)
+                except json.JSONDecodeError:
+                    # If not valid JSON, extract info from text response
+                    result = self._parse_text_response(ai_response)
+            elif isinstance(ai_response, dict):
+                result = ai_response
+            else:
+                # Fallback for unexpected response types
+                raise ValueError(f"Unexpected AI response type: {type(ai_response)}")
+            
+            return {
+                'is_correct': result.get('is_correct', True),
+                'score_percentage': float(result.get('score_percentage', 75)),
+                'feedback': result.get('feedback', 'Good effort!'),
+                'performance_level': result.get('performance_level', 'satisfactory')
+            }
+            
+        except Exception as e:
+            # Log the error for debugging
+            print(f"AI Scoring Error: {str(e)}")
+            print(f"Error type: {type(e)}")
+            
+            # Use rule-based fallback scoring when AI completely fails
+            return self._create_rule_based_writing_score(user_answer, prompt, criteria, min_words, max_words)
+    
+    async def _score_translation_with_ai(self, user_answer: str, source_text: str, correct_answer: str) -> Dict[str, Any]:
+        """Use AI to score translation exercise"""
+        try:
+            # Create system prompt
+            system_prompt = """You are a teacher grading translation exercises. Evaluate translations fairly and encouragingly.
+
+Return your evaluation in JSON format:
+{
+  "is_correct": true,
+  "feedback": "Your translation captures the meaning well..."
+}
+
+Be lenient - accept translations that capture the main meaning even if not perfect."""
+            
+            # Create user message
+            user_message = f"""Evaluate this translation:
+
+Source text: {source_text}
+Correct answer: {correct_answer}
+Student translation: {user_answer}
+
+Please evaluate:
+1. Accuracy of meaning
+2. Grammar and structure
+3. Overall quality"""
+            
+            message_history = [{"role": "user", "content": user_message}]
+            
+            # Call AI service with system prompt
+            ai_response = await self.ai_service.generate_response_with_system_prompt(
+                message_history=message_history,
+                system_prompt=system_prompt
+            )
+            
+            # Log the AI response for debugging
+            print(f"Translation AI Response: {ai_response}")
+            print(f"Translation AI Response type: {type(ai_response)}")
+            
+            # Handle different response types from AI service
+            if isinstance(ai_response, str):
+                # Try to parse as JSON if it's a string
+                import json
+                try:
+                    # Find JSON content (look for first { to last })
+                    start_idx = ai_response.find('{')
+                    end_idx = ai_response.rfind('}')
+                    
+                    if start_idx != -1 and end_idx != -1:
+                        json_str = ai_response[start_idx:end_idx + 1]
+                        result = json.loads(json_str)
+                    else:
+                        # If no JSON found, parse as text
+                        result = self._parse_translation_text_response(ai_response)
+                except json.JSONDecodeError:
+                    # If not valid JSON, extract info from text response
+                    result = self._parse_translation_text_response(ai_response)
+            elif isinstance(ai_response, dict):
+                result = ai_response
+            else:
+                # Fallback for unexpected response types
+                raise ValueError(f"Unexpected AI response type: {type(ai_response)}")
+            
+            return {
+                'is_correct': result.get('is_correct', True),
+                'feedback': result.get('feedback', 'Good translation effort!')
+            }
+            
+        except Exception as e:
+            # Log the error for debugging
+            print(f"Translation AI Scoring Error: {str(e)}")
+            print(f"Error type: {type(e)}")
+            
+            # Simple fallback if AI fails
+            return {
+                'is_correct': True,  # Be lenient in fallback
+                'feedback': 'Good translation effort!'
+            }
+    
+    def _parse_text_response(self, text_response: str) -> Dict[str, Any]:
+        """Parse AI text response when JSON parsing fails"""
+        # Simple text parsing for common patterns
+        result = {
+            'is_correct': True,  # Default to correct
+            'score_percentage': 75.0,  # Default score
+            'feedback': 'Good effort!',
+            'performance_level': 'satisfactory'
+        }
         
-        # Convert to score out of 40
-        content_score = int(similarity_ratio * 40)
+        text_lower = text_response.lower()
         
-        # Bonus for addressing the topic directly
-        topic_keywords = ['breakfast', 'eat', 'drink', 'food', 'morning', 'meal']
-        topic_matches = sum(1 for word in topic_keywords if word in user_answer.lower())
-        if topic_matches >= 2:
-            content_score += 5
+        # Look for score indicators
+        if 'excellent' in text_lower:
+            result['score_percentage'] = 90.0
+            result['performance_level'] = 'excellent'
+        elif 'good' in text_lower:
+            result['score_percentage'] = 80.0
+            result['performance_level'] = 'good'
+        elif 'poor' in text_lower or 'incorrect' in text_lower:
+            result['score_percentage'] = 50.0
+            result['performance_level'] = 'needs_improvement'
+            result['is_correct'] = False
         
-        return min(40, content_score)
+        # Use the full response as feedback
+        result['feedback'] = text_response
+        
+        return result
+    
+    def _parse_translation_text_response(self, text_response: str) -> Dict[str, Any]:
+        """Parse AI text response for translation when JSON parsing fails"""
+        result = {
+            'is_correct': True,  # Default to correct
+            'feedback': text_response
+        }
+        
+        text_lower = text_response.lower()
+        
+        # Look for negative indicators
+        if any(word in text_lower for word in ['incorrect', 'wrong', 'poor', 'bad']):
+            result['is_correct'] = False
+        
+        return result
+    
+    def _create_rule_based_writing_score(self, user_answer: str, prompt: str, criteria: list, min_words: int, max_words: int) -> Dict[str, Any]:
+        """Create rule-based scoring when AI fails completely"""
+        word_count = len(user_answer.split())
+        
+        # Basic word matching with prompt
+        prompt_words = set(word.lower() for word in prompt.split() if len(word) > 3)
+        user_words = set(word.lower() for word in user_answer.split() if len(word) > 3)
+        word_overlap = len(user_words.intersection(prompt_words))
+        
+        # Calculate basic scores
+        word_score = 0
+        if word_count >= max_words:
+            word_score = 35
+        elif word_count >= min_words:
+            word_score = 40
+        elif word_count >= min_words * 0.5:
+            word_score = 30
+        elif word_count >= 5:
+            word_score = 25
+        else:
+            word_score = 20
+            
+        # Content relevance score
+        content_score = 0
+        if word_overlap >= 3:
+            content_score = 35
+        elif word_overlap >= 2:
+            content_score = 30
+        elif word_overlap >= 1:
+            content_score = 25
+        else:
+            content_score = 15
+            
+        # Basic criteria check
+        criteria_score = 0
+        if criteria:
+            criteria_met = sum(1 for criterion in criteria if self._check_criterion(user_answer, criterion.lower()))
+            criteria_score = (criteria_met / len(criteria)) * 25
+        else:
+            criteria_score = 20
+            
+        total_score = word_score + content_score + criteria_score
+        
+        # Determine result with lenient thresholds
+        is_correct = total_score >= 45 or word_overlap >= 1 or word_count >= 3
+        
+        # Generate feedback
+        if total_score >= 80:
+            feedback = f"Excellent work! Your {word_count}-word response addresses the prompt well."
+            performance_level = "excellent"
+        elif total_score >= 60:
+            feedback = f"Good job! Your {word_count}-word response shows understanding."
+            performance_level = "good"
+        elif total_score >= 45:
+            feedback = f"Nice effort! Your {word_count}-word response is on the right track."
+            performance_level = "satisfactory"
+        else:
+            feedback = f"Good start! Try to include more details related to the prompt. Current: {word_count} words."
+            performance_level = "needs_improvement"
+            
+        return {
+            'is_correct': is_correct,
+            'score_percentage': float(min(100, max(50, total_score))),
+            'feedback': feedback,
+            'performance_level': performance_level
+        }
     
     def _get_performance_level(self, score: int) -> str:
         """Get performance level based on score"""
@@ -199,65 +521,12 @@ class ExerciseScoringUseCase:
             else:
                 return f"Your answer needs to be more relevant to the topic. Current length: {word_count} words."
     
-    def _calculate_translation_score(self, user_answer: str, source_text: str, correct_answer: str) -> dict:
-        """Calculate translation score based on similarity to correct answer and understanding of source text"""
-        user_answer = user_answer.strip().lower()
-        correct_answer = correct_answer.strip().lower()
-        source_text = source_text.strip().lower()
+    async def _calculate_translation_score(self, user_answer: str, source_text: str, correct_answer: str) -> dict:
+        """AI-powered translation scoring"""
+        # Use AI to evaluate translation quality
+        ai_result = await self._score_translation_with_ai(user_answer, source_text, correct_answer)
         
-        # Exact match check
-        if user_answer == correct_answer:
-            return {
-                'is_correct': True,
-                'feedback': 'Perfect! Your translation is exactly correct.'
-            }
-        
-        # Calculate similarity score with correct answer
-        similarity_score = self._calculate_text_similarity(user_answer, correct_answer)
-        
-        # Check for key words/phrases from correct answer
-        correct_words = set(correct_answer.split())
-        user_words = set(user_answer.split())
-        
-        # Calculate word overlap with correct answer
-        overlap = len(correct_words.intersection(user_words))
-        total_words = len(correct_words)
-        
-        if total_words == 0:
-            word_overlap_ratio = 0
-        else:
-            word_overlap_ratio = overlap / total_words
-        
-        # Additional check: Does the translation make sense for the source text?
-        # Extract key concepts from source text that should be reflected in translation
-        source_meaning_score = self._check_translation_meaning(user_answer, source_text, correct_answer)
-        
-        # Combine scores for final decision
-        # Lower the threshold since we're considering source context
-        is_correct = (
-            similarity_score > 0.6 or 
-            word_overlap_ratio > 0.7 or
-            (similarity_score > 0.4 and source_meaning_score > 0.6)
-        )
-        
-        # Generate feedback based on different aspects
-        if similarity_score > 0.9:
-            feedback = "Excellent! Your translation is very close to the correct answer."
-        elif similarity_score > 0.7:
-            feedback = "Good! Your translation captures the main meaning well."
-        elif similarity_score > 0.5 and source_meaning_score > 0.6:
-            feedback = "Good understanding! Your translation conveys the source meaning correctly."
-        elif word_overlap_ratio > 0.6:
-            feedback = "Close! You have most of the key words but check the structure."
-        elif source_meaning_score > 0.5:
-            feedback = "You understand the source text, but try to match the expected translation style."
-        else:
-            feedback = f"Keep trying! The correct answer is: '{correct_answer.title()}'. Make sure to capture the meaning of: '{source_text}'"
-        
-        return {
-            'is_correct': is_correct,
-            'feedback': feedback
-        }
+        return ai_result
     
     def _calculate_text_similarity(self, text1: str, text2: str) -> float:
         """Calculate similarity between two texts using simple word overlap"""
