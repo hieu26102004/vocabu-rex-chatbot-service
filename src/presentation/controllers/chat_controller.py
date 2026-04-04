@@ -1,7 +1,7 @@
 from typing import List
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status, Body, Header
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import logging
 
 from ...application.dtos.chat_dtos import (
@@ -198,6 +198,58 @@ async def send_message(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to process message: {str(e)}"
         )
+
+
+@chat_router.post("/message/stream")
+async def send_message_stream(
+    request: ChatMessageRequest,
+    user_id: str = Header(..., alias="x-user-id"),
+    chat_use_case: ChatUseCase = Depends(get_chat_use_case)
+):
+    """SSE streaming endpoint for chat messages"""
+    import json as json_module
+    request.user_id = user_id
+    
+    async def event_generator():
+        try:
+            logger.info(f"Streaming message for conversation: {request.conversation_id}")
+            
+            # Send conversation_id first (useful when auto-creating conversations)
+            async for chunk in chat_use_case.send_message_stream(request):
+                event_data = json_module.dumps({
+                    "type": "chunk",
+                    "content": chunk,
+                    "conversation_id": request.conversation_id
+                }, ensure_ascii=False)
+                yield f"data: {event_data}\n\n"
+            
+            # Signal stream completion
+            done_data = json_module.dumps({
+                "type": "done",
+                "conversation_id": request.conversation_id
+            })
+            yield f"data: {done_data}\n\n"
+            
+        except ConversationNotFoundException as e:
+            error_data = json_module.dumps({"type": "error", "message": str(e), "code": 404})
+            yield f"data: {error_data}\n\n"
+        except InvalidMessageException as e:
+            error_data = json_module.dumps({"type": "error", "message": str(e), "code": 400})
+            yield f"data: {error_data}\n\n"
+        except Exception as e:
+            logger.error(f"Error streaming message: {str(e)}")
+            error_data = json_module.dumps({"type": "error", "message": "AI service temporarily unavailable", "code": 503})
+            yield f"data: {error_data}\n\n"
+    
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @chat_router.get("/conversation/{conversation_id}/history", response_model=ConversationHistoryResponse)

@@ -1,6 +1,6 @@
 """AI Service interface for chat domain"""
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any
+from typing import List, Dict, Any, AsyncGenerator
 
 
 class AIService(ABC):
@@ -24,6 +24,18 @@ class AIService(ABC):
     ) -> str:
         """Generate AI response with specific system prompt"""
         pass
+    
+    @abstractmethod
+    async def generate_response_with_system_prompt_stream(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream AI response chunks with specific system prompt"""
+        pass
+        # Need yield to make it a proper async generator
+        yield  # pragma: no cover
     
     @abstractmethod
     async def generate_conversation_title(self, first_message: str) -> str:

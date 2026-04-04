@@ -1,6 +1,6 @@
 """Real Gemini AI service implementation - NO MOCK DATA"""
 import google.generativeai as genai
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, AsyncGenerator
 import asyncio
 import logging
 
@@ -99,6 +99,95 @@ class GeminiAIService:
             return text.strip()
         except Exception as e:
             raise GeminiAPIException(f"Gemini API call failed: {str(e)}")
+    
+    def _generate_sync_stream(self, prompt: str):
+        """Synchronous streaming call to Gemini API - returns iterator of chunks"""
+        try:
+            response = self.model.generate_content(prompt, stream=True)
+            for chunk in response:
+                if chunk.text:
+                    yield chunk.text
+        except Exception as e:
+            raise GeminiAPIException(f"Gemini API stream failed: {str(e)}")
+    
+    async def generate_response_stream(
+        self, 
+        message_history: List[Dict[str, Any]], 
+        context: Dict[str, Any] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream AI response using Gemini API"""
+        try:
+            enhanced_prompt = self._build_context_aware_prompt(message_history, context)
+            yield_from = await self._run_stream_in_executor(enhanced_prompt)
+            for chunk in yield_from:
+                yield chunk
+        except Exception as e:
+            logger.error(f"Gemini API stream error: {str(e)}")
+            raise GeminiAPIException(f"Failed to stream response: {str(e)}")
+    
+    async def generate_response_with_system_prompt_stream(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream AI response with specific system prompt"""
+        try:
+            enhanced_prompt = self._build_prompt_with_system_instruction(
+                message_history, system_prompt, context
+            )
+            chunks = await self._run_stream_in_executor(enhanced_prompt)
+            for chunk in chunks:
+                yield chunk
+        except Exception as e:
+            logger.error(f"Gemini API stream error: {str(e)}")
+            raise GeminiAPIException(f"Failed to stream response: {str(e)}")
+    
+    async def _run_stream_in_executor(self, prompt: str) -> list:
+        """Run sync streaming in thread pool executor and collect chunks"""
+        loop = asyncio.get_event_loop()
+        # Collect all chunks in executor since generator can't cross thread boundary
+        # For true streaming, we use a queue-based approach
+        chunks = await loop.run_in_executor(
+            None,
+            lambda: list(self._generate_sync_stream(prompt))
+        )
+        return chunks
+    
+    async def generate_response_with_system_prompt_stream_async(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        context: Dict[str, Any] = None
+    ) -> AsyncGenerator[str, None]:
+        """True async streaming using asyncio Queue for real-time chunk delivery"""
+        enhanced_prompt = self._build_prompt_with_system_instruction(
+            message_history, system_prompt, context
+        )
+        
+        queue = asyncio.Queue()
+        sentinel = object()  # Signal end of stream
+        
+        def _producer():
+            """Run in thread pool - produces chunks into queue"""
+            try:
+                for chunk_text in self._generate_sync_stream(enhanced_prompt):
+                    asyncio.run_coroutine_threadsafe(queue.put(chunk_text), loop)
+            except Exception as e:
+                asyncio.run_coroutine_threadsafe(queue.put(e), loop)
+            finally:
+                asyncio.run_coroutine_threadsafe(queue.put(sentinel), loop)
+        
+        loop = asyncio.get_event_loop()
+        loop.run_in_executor(None, _producer)
+        
+        while True:
+            item = await queue.get()
+            if item is sentinel:
+                break
+            if isinstance(item, Exception):
+                raise GeminiAPIException(f"Stream failed: {str(item)}")
+            yield item
     
     def _build_context_aware_prompt(
         self, 

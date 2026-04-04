@@ -8,6 +8,7 @@ from datetime import datetime
 
 from .presentation.controllers.chat_controller import chat_router
 from .presentation.controllers.deeplink_controller import deeplink_router
+from .presentation.controllers.voice_chat_controller import voice_router
 from .infrastructure.factories.writing_assessment_factory import WritingAssessmentFactory
 from .infrastructure.factories.image_description_factory import ImageDescriptionScoringFactory
 from .infrastructure.factories.exercise_scoring_factory import ExerciseScoringFactory
@@ -44,6 +45,7 @@ async def lifespan(app: FastAPI):
     # Initialize all routers after database connection
     app.include_router(chat_router)
     app.include_router(deeplink_router)
+    app.include_router(voice_router)
     app.include_router(writing_assessment_router)
     app.include_router(image_description_router)
     app.include_router(exercise_scoring_router)
