@@ -1,7 +1,7 @@
 """Chat use cases for handling conversation logic"""
 import uuid
 from datetime import datetime
-from typing import Optional, List, Dict, AsyncGenerator
+from typing import Optional, List, Dict
 
 from ..dtos.chat_dtos import (
     ChatMessageRequest, 
@@ -144,63 +144,6 @@ class ChatUseCase:
             
         except Exception as e:
             raise InvalidMessageException(f"Failed to generate AI response: {str(e)}")
-    
-    async def send_message_stream(self, request: ChatMessageRequest) -> AsyncGenerator[str, None]:
-        """Send a message and stream AI response chunks"""
-        
-        # Get or create conversation (same logic as send_message)
-        if request.conversation_id:
-            conversation = await self.conversation_repository.get_conversation(request.conversation_id)
-            if not conversation:
-                raise ConversationNotFoundException(f"Conversation {request.conversation_id} not found")
-        else:
-            context_with_role = request.context.copy() if request.context else {}
-            context_with_role['role'] = request.role
-            start_request = StartConversationRequest(
-                user_id=request.user_id,
-                role=request.role,
-                context=context_with_role
-            )
-            conv_response = await self.start_conversation(start_request)
-            conversation = await self.conversation_repository.get_conversation(conv_response.id)
-        
-        # Add user message
-        user_message = Message(
-            id=str(uuid.uuid4()),
-            conversation_id=conversation.id,
-            role=MessageRole.USER,
-            content=request.message,
-            message_type=MessageType.TEXT
-        )
-        conversation.add_message(user_message)
-        
-        # Stream AI response
-        try:
-            role = request.role if hasattr(request, 'role') and request.role else conversation.context.get('role', 'general')
-            system_prompt = self._get_system_prompt(role)
-            
-            full_response = ""
-            async for chunk in self.ai_service.generate_response_with_system_prompt_stream(
-                conversation.get_message_history_for_ai(),
-                system_prompt,
-                conversation.context
-            ):
-                full_response += chunk
-                yield chunk
-            
-            # After streaming complete, save the full AI message
-            ai_message = Message(
-                id=str(uuid.uuid4()),
-                conversation_id=conversation.id,
-                role=MessageRole.ASSISTANT,
-                content=full_response,
-                message_type=MessageType.TEXT
-            )
-            conversation.add_message(ai_message)
-            await self.conversation_repository.update_conversation(conversation)
-            
-        except Exception as e:
-            raise InvalidMessageException(f"Failed to stream AI response: {str(e)}")
     
     async def get_conversation_history(self, conversation_id: str) -> ConversationHistoryResponse:
         """Get conversation history"""

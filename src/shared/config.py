@@ -43,11 +43,6 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "vocabu_rex_chatbot"
     
-    # Voice Service Configuration (ngrok URLs for local GPU laptops)
-    voice_tts_url: str = ""  # ngrok URL for Laptop 1 (TTS)
-    voice_stt_url: str = ""  # ngrok URL for Laptop 2 (STT)
-    voice_enabled: bool = False  # Toggle voice features
-    
     @property
     def allowed_origins_list(self) -> List[str]:
         """Convert comma-separated origins to list"""

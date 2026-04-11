@@ -1,5 +1,5 @@
 """Gemini AI Service implementation"""
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any
 from ...domain.services.ai_service import AIService
 from .gemini_service import GeminiAIService as GeminiImplementation
 
@@ -28,18 +28,6 @@ class GeminiAIServiceAdapter(AIService):
         return await self.gemini_service.generate_response_with_system_prompt(
             message_history, system_prompt, context
         )
-    
-    async def generate_response_with_system_prompt_stream(
-        self,
-        message_history: List[Dict[str, Any]],
-        system_prompt: str,
-        context: Dict[str, Any] = None
-    ) -> AsyncGenerator[str, None]:
-        """Stream AI response chunks with specific system prompt"""
-        async for chunk in self.gemini_service.generate_response_with_system_prompt_stream_async(
-            message_history, system_prompt, context
-        ):
-            yield chunk
     
     async def generate_conversation_title(self, first_message: str) -> str:
         """Generate a title for conversation based on first message"""
