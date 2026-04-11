@@ -1,0 +1,44 @@
+name: CD FastAPI to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2 via SCP
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          # Copy toàn bộ code vào server (loại bỏ venv và các file rác)
+          source: "./*"
+          target: ${{ secrets.TARGET_DIR }}
+          rm: false # Giữ lại các file cũ nếu cần, hoặc set true để dọn dẹp thư mục trước khi copy
+
+      - name: SSH and Restart App with PM2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd ${{ secrets.TARGET_DIR }}
+            
+            # 1. Tạo venv nếu chưa có
+            python3 -m venv venv
+            
+            # 2. Cài đặt dependencies
+            source venv/bin/activate
+            pip install --upgrade pip
+            if [ -f "requirements.txt" ]; then pip install -r requirements.txt; fi
+            
+            # 3. Khởi động lại ứng dụng bằng PM2
+            # Sử dụng --update-env để cập nhật các biến môi trường mới nếu có
+            pm2 restart "VOCABUREX_CHATBOT" || pm2 start "venv/bin/python -m uvicorn src.main:app --host 0.0.0.0 --port 3006" --name "VOCABUREX_CHATBOT"
