@@ -29,6 +29,11 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     await connect_to_mongo()
     
+    # Initialize RAG service (build/load vectorstore)
+    from .infrastructure.external.rag_service import initialize_rag_service
+    await initialize_rag_service()
+    logger.info("RAG service initialization completed")
+    
     # Initialize writing assessment components
     database = await get_database()
     writing_assessment_factory = WritingAssessmentFactory(database)

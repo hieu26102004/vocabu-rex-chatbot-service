@@ -43,6 +43,14 @@ class Settings(BaseSettings):
     mongodb_url: str = "mongodb://localhost:27017"
     mongodb_database: str = "vocabu_rex_chatbot"
     
+    # RAG Configuration
+    rag_pdf_dir: str = "data/pdfs"
+    rag_vectorstore_dir: str = "data/vectorstore"
+    rag_chunk_size: int = 1000
+    rag_chunk_overlap: int = 200
+    rag_top_k: int = 4
+    rag_enabled: bool = True
+    
     @property
     def allowed_origins_list(self) -> List[str]:
         """Convert comma-separated origins to list"""

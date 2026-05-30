@@ -1,5 +1,6 @@
 """Chat use cases for handling conversation logic"""
 import uuid
+import logging
 from datetime import datetime
 from typing import Optional, List, Dict
 
@@ -18,6 +19,9 @@ from ...domain.services.ai_service import AIService
 from ...core.exceptions import ConversationNotFoundException, InvalidMessageException
 from ...domain.repositories.user_repository import UserRepository
 from ...domain.repositories.conversation_repository import ConversationRepository
+from ...domain.services.rag_service import RAGService
+
+logger = logging.getLogger(__name__)
 
 
 class ChatUseCase:
@@ -27,11 +31,13 @@ class ChatUseCase:
         self,
         user_repository: UserRepository,
         conversation_repository: ConversationRepository,
-        ai_service: AIService
+        ai_service: AIService,
+        rag_service: RAGService = None
     ):
         self.user_repository = user_repository
         self.conversation_repository = conversation_repository
         self.ai_service = ai_service
+        self.rag_service = rag_service
     
     async def start_conversation(self, request: StartConversationRequest) -> ConversationResponse:
         """Start a new conversation"""
@@ -113,6 +119,17 @@ class ChatUseCase:
             # Extract role from request or conversation context
             role = request.role if hasattr(request, 'role') and request.role else conversation.context.get('role', 'general')
             system_prompt = self._get_system_prompt(role)
+            
+            # RAG: retrieve relevant context for knowledge-based roles
+            if self.rag_service and role in self._get_rag_enabled_roles():
+                try:
+                    retrieved_chunks = await self.rag_service.retrieve(request.message)
+                    if retrieved_chunks:
+                        rag_context = "\n\n📚 TÀI LIỆU THAM KHẢO:\n" + "\n---\n".join(retrieved_chunks)
+                        system_prompt += rag_context
+                        logger.info(f"RAG: injected {len(retrieved_chunks)} chunks for role '{role}'")
+                except Exception as e:
+                    logger.warning(f"RAG retrieval failed, continuing without context: {e}")
             
             ai_response = await self.ai_service.generate_response_with_system_prompt(
                 conversation.get_message_history_for_ai(),
@@ -261,3 +278,7 @@ Remember: You are Rex, a voice on a call. Be conversational, be human, be fun!""
 Hãy bắt đầu hỗ trợ học viên!"""
         
         return prompts.get(role, prompts["vocabulary_expert"]) + base_instruction
+    
+    def _get_rag_enabled_roles(self) -> list:
+        """Roles that benefit from RAG document retrieval"""
+        return ["grammar_tutor", "vocabulary_expert", "corrector_assistant"]
