@@ -266,6 +266,10 @@ Remember: You are Rex, a voice on a call. Be conversational, be human, be fun!""
     def _get_system_prompt(self, role: str = "vocabulary_expert") -> str:
         """Get system prompt for specific AI role"""
         prompts = self._get_system_prompts()
+        
+        if role == "voice_partner":
+            return prompts.get(role)
+            
         base_instruction = """
 
 🌟 NGUYÊN TẮC CHUNG:
