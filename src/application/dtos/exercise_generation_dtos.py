@@ -8,6 +8,7 @@ class ExerciseGenerationRequest(BaseModel):
     topic: str = Field(default="General English", description="Topic for exercises")
     difficulty: str = Field(default="intermediate", description="Difficulty level")
     exercise_count: int = Field(default=8, ge=1, le=20, description="Number of exercises to generate")
+    allowed_types: Optional[List[str]] = Field(default=None, description="Allowed exercise types to generate")
 
 
 class GeneratedExercise(BaseModel):

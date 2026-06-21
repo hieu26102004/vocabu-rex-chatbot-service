@@ -48,6 +48,40 @@ You MUST generate exercises using ONLY these exercise types (choose a good mix):
 9. **image_description** - Describe an image
    Meta format: {{ "imageUrl": "https://picsum.photos/400/300", "prompt": "Describe what you see in this image", "expectedResults": "A description of what should be in the answer" }}
 
+10. **podcast** - Podcast-style listening comprehension dialogue
+    Meta format: {{
+      "title": "Dialogue title",
+      "description": "Brief description of the dialogue",
+      "showTranscript": true,
+      "media": {{ "type": "none", "url": null, "thumbnailUrl": null }},
+      "segments": [
+        {{
+          "order": 1,
+          "transcript": "Speaker's dialogue text",
+          "voiceGender": "female",
+          "questions": null
+        }},
+        {{
+          "order": 2,
+          "transcript": "Another speaker's text",
+          "voiceGender": "male",
+          "questions": [
+            {{
+              "type": "match",
+              "question": "Match instruction text",
+              "pairs": [{{ "left": "English", "right": "Vietnamese" }}]
+            }}
+          ]
+        }}
+      ]
+    }}
+    Generate 8-12 segments alternating between male and female speakers.
+    Include questions on most segments (not the first and last).
+    Mix question types: match, trueFalse, listenChoose, multipleChoice.
+    - trueFalse format: {{ "type": "trueFalse", "statement": "...", "correctAnswer": true/false, "explanation": "..." }}
+    - listenChoose format: {{ "type": "listenChoose", "question": "...", "correctWords": ["a", "b"], "distractorWords": ["c", "d"] }}
+    - multipleChoice format: {{ "type": "multipleChoice", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }}
+
 IMPORTANT RULES:
 - Generate EXACTLY {exercise_count} exercises
 - Use a good MIX of different exercise types (don't repeat the same type consecutively)
@@ -109,11 +143,15 @@ class ExerciseGenerationUseCase:
     async def generate(self, request: ExerciseGenerationRequest) -> ExerciseGenerationResponse:
         """Generate exercises using AI"""
         try:
+            allowed_types_str = ""
+            if request.allowed_types:
+                allowed_types_str = f"\n\nCRITICAL RESTRICTION: You MUST ONLY generate exercises from the following types: {', '.join(request.allowed_types)}. DO NOT generate any other exercise types!"
+
             prompt = EXERCISE_GENERATION_PROMPT.format(
                 exercise_count=request.exercise_count,
                 topic=request.topic,
                 difficulty=request.difficulty,
-            )
+            ) + allowed_types_str
 
             logger.info(
                 f"Generating {request.exercise_count} exercises: "
@@ -172,7 +210,7 @@ class ExerciseGenerationUseCase:
         valid_types = {
             "translate", "listen_choose", "fill_blank", "speak",
             "match", "multiple_choice", "writing_prompt",
-            "image_description", "compare_words",
+            "image_description", "compare_words", "podcast"
         }
 
         for item in parsed:

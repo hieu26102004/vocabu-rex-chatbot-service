@@ -13,6 +13,8 @@ from .infrastructure.factories.image_description_factory import ImageDescription
 from .infrastructure.factories.exercise_scoring_factory import ExerciseScoringFactory
 from .infrastructure.factories.exercise_generation_factory import ExerciseGenerationFactory
 from .infrastructure.factories.roadmap_recommendation_factory import RoadmapRecommendationFactory
+from .infrastructure.factories.roadmap_generation_factory import RoadmapGenerationFactory
+from .infrastructure.factories.skill_generation_factory import SkillGenerationFactory
 from .shared.config import settings
 from .infrastructure.database_connection import connect_to_mongo, close_mongo_connection, get_database
 
@@ -52,9 +54,16 @@ async def lifespan(app: FastAPI):
     exercise_generation_factory = ExerciseGenerationFactory(database)
     exercise_generation_router = exercise_generation_factory.create_router()
 
-    # Initialize roadmap recommendation components
+    # Initialize roadmap recommendation and generation components
     roadmap_recommendation_factory = RoadmapRecommendationFactory(database)
     roadmap_recommendation_router = roadmap_recommendation_factory.create_router()
+
+    roadmap_generation_factory = RoadmapGenerationFactory(database)
+    roadmap_generation_router = roadmap_generation_factory.create_router()
+
+    # Initialize skill generation components
+    skill_generation_factory = SkillGenerationFactory(database)
+    skill_generation_router = skill_generation_factory.create_router()
 
     # Initialize all routers after database connection
     app.include_router(chat_router)
@@ -64,6 +73,8 @@ async def lifespan(app: FastAPI):
     app.include_router(exercise_scoring_router)
     app.include_router(exercise_generation_router)
     app.include_router(roadmap_recommendation_router)
+    app.include_router(roadmap_generation_router)
+    app.include_router(skill_generation_router)
     
     logger.info("Application startup completed")
     yield
