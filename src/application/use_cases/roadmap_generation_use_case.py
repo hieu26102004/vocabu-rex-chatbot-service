@@ -35,7 +35,7 @@ RULES:
    - A targetLevel from this list IN ASCENDING ORDER: {valid_levels}
    - Milestones should progress from easier to harder levels
    - Early milestones can share the same level, but overall trend must be ascending
-4. Generate EXACTLY 10 milestones with order from 0 to 9.
+4. Generate EXACTLY 10 milestones with order from 1 to 10.
 5. The description should summarize the roadmap's learning journey.
 
 You MUST respond with ONLY a valid JSON object in this exact format:

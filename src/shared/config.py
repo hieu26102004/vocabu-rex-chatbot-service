@@ -9,6 +9,8 @@ class Settings(BaseSettings):
     
     # Gemini AI Configuration
     gemini_api_key: str
+    gemini_api_key_1: str | None = None
+    gemini_api_key_2: str | None = None
     gemini_model: str = "gemini-2.5-flash"
     
     # Service Configuration  
@@ -55,6 +57,16 @@ class Settings(BaseSettings):
     def allowed_origins_list(self) -> List[str]:
         """Convert comma-separated origins to list"""
         return [origin.strip() for origin in self.allowed_origins.split(",")]
+    
+    @property
+    def all_gemini_keys(self) -> List[str]:
+        """Get all available Gemini API keys"""
+        keys = [self.gemini_api_key]
+        if self.gemini_api_key_1:
+            keys.append(self.gemini_api_key_1)
+        if self.gemini_api_key_2:
+            keys.append(self.gemini_api_key_2)
+        return keys
     
     class Config:
         env_file = ".env"

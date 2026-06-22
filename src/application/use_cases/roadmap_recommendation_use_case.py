@@ -22,10 +22,8 @@ class RoadmapRecommendationUseCase:
         if not request.existingRoadmaps:
             raise ValueError("No roadmaps available to recommend from")
 
-        # If only one roadmap exists, return it directly — no need to call AI
-        if len(request.existingRoadmaps) == 1:
-            logger.info(f"Only one roadmap available, returning it directly: {request.existingRoadmaps[0].id}")
-            return RecommendRoadmapResponse(roadmapId=request.existingRoadmaps[0].id)
+        # If only one roadmap exists, we still want to check if it's a good fit.
+        # So we don't automatically return it anymore unless it's a fallback match.
 
         # Build the prompt for AI
         roadmaps_description = "\n".join(
@@ -60,10 +58,10 @@ INSTRUCTIONS:
 2. Match these against the available roadmaps' target goals and titles.
 3. Select the single best roadmap ID for this user.
 4. If the user's learning goals directly match a roadmap's targetGoal, prefer that roadmap.
-5. If no direct match, choose the roadmap that is most broadly useful for the user's profile.
+5. If NO existing roadmap is a suitable fit for the user's specific learning goals and profile, you MUST return an empty string for the roadmapId.
 
 You MUST respond with ONLY a valid JSON object in this exact format:
-{{"roadmapId": "<the selected roadmap ID>"}}
+{{"roadmapId": "<the selected roadmap ID, or empty string if none are suitable>"}}
 
 Do NOT include any other text, explanation, or formatting. Only the JSON object."""
 
@@ -105,6 +103,9 @@ Do NOT include any other text, explanation, or formatting. Only the JSON object.
             return self._fallback_match(request)
 
         # Validate the roadmap ID exists in the available roadmaps
+        if roadmap_id == "":
+            return ""
+
         valid_ids = {r.id for r in request.existingRoadmaps}
         if roadmap_id in valid_ids:
             return roadmap_id
@@ -113,11 +114,11 @@ Do NOT include any other text, explanation, or formatting. Only the JSON object.
         return self._fallback_match(request)
 
     def _fallback_match(self, request: RecommendRoadmapRequest) -> str:
-        """Simple deterministic fallback: match learning goals to targetGoal, or return first roadmap"""
+        """Simple deterministic fallback: match learning goals to targetGoal, or return empty"""
         if request.learningGoals:
             for roadmap in request.existingRoadmaps:
                 if roadmap.targetGoal in request.learningGoals:
                     return roadmap.id
 
-        # Last resort: return the first roadmap
-        return request.existingRoadmaps[0].id
+        # Last resort: return empty string so a new roadmap is generated
+        return ""

@@ -18,8 +18,11 @@ class GeminiAIService:
         if not settings.gemini_api_key or settings.gemini_api_key == "your_gemini_api_key_here":
             raise GeminiAPIException("Gemini API key not configured. Please set GEMINI_API_KEY in .env file")
         
-        # Configure Gemini API
-        genai.configure(api_key=settings.gemini_api_key)
+        self.api_keys = settings.all_gemini_keys
+        self.current_key_idx = 0
+        
+        # Configure Gemini API with the first key
+        genai.configure(api_key=self.api_keys[self.current_key_idx])
         
         # Initialize model
         self.model = genai.GenerativeModel(
@@ -86,19 +89,42 @@ class GeminiAIService:
             raise GeminiAPIException(f"Failed to generate response: {str(e)}")
 
     def _generate_sync_response(self, prompt: str) -> str:
-        """Synchronous call to Gemini API"""
-        try:
-            response = self.model.generate_content(prompt)
-            # Prefer response.parts if available
-            if not response or not hasattr(response, "parts") or not response.parts:
-                raise GeminiAPIException("Empty response from Gemini API")
-            # Join all text parts
-            text = "\n".join([part.text for part in response.parts if hasattr(part, "text")])
-            if not text.strip():
-                raise GeminiAPIException("Empty response text from Gemini API")
-            return text.strip()
-        except Exception as e:
-            raise GeminiAPIException(f"Gemini API call failed: {str(e)}")
+        """Synchronous call to Gemini API using default model"""
+        return self.generate_content_with_retry(self.model, prompt)
+
+    def generate_content_with_retry(self, model, prompt: str) -> str:
+        """Synchronous call to Gemini API with key rotation and retry logic"""
+        max_retries = len(self.api_keys)
+        last_exception = None
+        
+        for attempt in range(max_retries):
+            try:
+                response = model.generate_content(prompt)
+                
+                # Prefer response.parts if available
+                if not response or not hasattr(response, "parts") or not response.parts:
+                    raise GeminiAPIException("Empty response from Gemini API")
+                # Join all text parts
+                text = "\n".join([part.text for part in response.parts if hasattr(part, "text")])
+                if not text.strip():
+                    raise GeminiAPIException("Empty response text from Gemini API")
+                return text.strip()
+            except Exception as e:
+                last_exception = e
+                error_msg = str(e).lower()
+                
+                # If error is 429 ResourceExhausted or 500, rotate key and retry
+                if "429" in error_msg or "resourceexhausted" in error_msg or "500" in error_msg or "internalservererror" in error_msg:
+                    self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+                    next_key = self.api_keys[self.current_key_idx]
+                    logger.warning(f"Gemini API rate limit or server error. Rotating to API key index {self.current_key_idx}. Error: {e}")
+                    genai.configure(api_key=next_key)
+                else:
+                    # For other errors (like 400 Bad Request), don't retry, just raise
+                    logger.error(f"Gemini API non-retriable error: {e}")
+                    raise GeminiAPIException(f"Gemini API call failed: {str(e)}")
+                    
+        raise GeminiAPIException(f"Gemini API call failed after {max_retries} attempts. Last error: {str(last_exception)}")
     
     def _build_context_aware_prompt(
         self, 

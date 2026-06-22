@@ -10,6 +10,8 @@ from ..dtos.exercise_generation_dtos import (
     ExerciseGenerationResponse,
     GeneratedExercise,
 )
+from ..dtos.exercise_meta_dtos import META_TYPE_MAP
+from pydantic import ValidationError
 from ...infrastructure.external.ai_service_adapter import GeminiAIServiceAdapter
 from ...core.exceptions import ProcessingError
 
@@ -126,15 +128,9 @@ class ExerciseGenerationUseCase:
         )
 
     def _generate_exercises_sync(self, prompt: str) -> str:
-        """Synchronous call to Gemini API with high token limit and JSON output"""
+        """Synchronous call to Gemini API with high token limit, JSON output, and retry logic"""
         try:
-            response = self._exercise_model.generate_content(prompt)
-            if not response or not hasattr(response, "parts") or not response.parts:
-                raise ProcessingError("Empty response from Gemini API")
-            text = "\n".join([part.text for part in response.parts if hasattr(part, "text")])
-            if not text.strip():
-                raise ProcessingError("Empty response text from Gemini API")
-            return text.strip()
+            return self.ai_service.gemini_service.generate_content_with_retry(self._exercise_model, prompt)
         except ProcessingError:
             raise
         except Exception as e:
@@ -218,11 +214,23 @@ class ExerciseGenerationUseCase:
             if exercise_type not in valid_types:
                 logger.warning(f"Skipping invalid exercise type: {exercise_type}")
                 continue
+                
+            meta_data = item.get("meta", {})
+            # Validate meta against Pydantic schema
+            try:
+                meta_model_class = META_TYPE_MAP.get(exercise_type)
+                if meta_model_class:
+                    meta_model_class(**meta_data)
+                else:
+                    logger.warning(f"No Pydantic model found for {exercise_type}, skipping validation")
+            except ValidationError as ve:
+                logger.warning(f"Validation failed for {exercise_type} exercise. Error: {ve}")
+                continue # Skip this exercise as it doesn't match the required schema
 
             exercises.append(GeneratedExercise(
                 exerciseType=exercise_type,
                 prompt=item.get("prompt", ""),
-                meta=item.get("meta", {}),
+                meta=meta_data,
             ))
 
         if not exercises:
