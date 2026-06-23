@@ -9,6 +9,7 @@ class GenerateRoadmapRequest(BaseModel):
     proficiencyLevel: Optional[str] = Field(None, description="User's proficiency level")
     learningGoals: Optional[List[str]] = Field(None, description="User's learning goals")
     dailyGoalMinutes: Optional[int] = Field(None, description="Daily study goal in minutes")
+    customPrompt: Optional[str] = Field(None, description="Raw natural language prompt from user for unconstrained roadmap generation")
 
 
 class GeneratedMilestone(BaseModel):

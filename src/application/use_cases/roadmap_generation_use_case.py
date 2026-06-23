@@ -23,7 +23,7 @@ ROADMAP_GENERATION_PROMPT = """You are VocabuRex's roadmap generation engine.
 
 Create a personalized English learning roadmap with EXACTLY 10 milestones for a user with the following profile:
 
-USER PROFILE:
+USER PROFILE OR CUSTOM REQUEST:
 {user_profile}
 
 RULES:
@@ -63,17 +63,20 @@ class RoadmapGenerationUseCase:
     async def generate(self, request: GenerateRoadmapRequest) -> GenerateRoadmapResponse:
         """Generate a personalized roadmap"""
 
-        user_profile_parts = []
-        if request.targetLanguage:
-            user_profile_parts.append(f"- Target Language: {request.targetLanguage}")
-        if request.proficiencyLevel:
-            user_profile_parts.append(f"- Current Proficiency: {request.proficiencyLevel}")
-        if request.learningGoals:
-            user_profile_parts.append(f"- Learning Goals: {', '.join(request.learningGoals)}")
-        if request.dailyGoalMinutes is not None:
-            user_profile_parts.append(f"- Daily Study Goal: {request.dailyGoalMinutes} minutes")
+        if request.customPrompt:
+            user_profile_str = f"RAW CONTEXT / SPECIFIC REQUIREMENTS FROM USER:\n{request.customPrompt}"
+        else:
+            user_profile_parts = []
+            if request.targetLanguage:
+                user_profile_parts.append(f"- Target Language: {request.targetLanguage}")
+            if request.proficiencyLevel:
+                user_profile_parts.append(f"- Current Proficiency: {request.proficiencyLevel}")
+            if request.learningGoals:
+                user_profile_parts.append(f"- Learning Goals: {', '.join(request.learningGoals)}")
+            if request.dailyGoalMinutes is not None:
+                user_profile_parts.append(f"- Daily Study Goal: {request.dailyGoalMinutes} minutes")
 
-        user_profile_str = "\n".join(user_profile_parts) if user_profile_parts else "- General English learner"
+            user_profile_str = "\n".join(user_profile_parts) if user_profile_parts else "- General English learner"
 
         prompt = ROADMAP_GENERATION_PROMPT.format(
             user_profile=user_profile_str,
