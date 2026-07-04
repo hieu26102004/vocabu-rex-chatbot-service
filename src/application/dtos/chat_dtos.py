@@ -21,6 +21,9 @@ class ChatMessageResponse(BaseModel):
     content: str
     timestamp: datetime
     metadata: Dict[str, Any] = Field(default_factory=dict)
+    quick_replies: Optional[List[str]] = Field(None, description="AI-generated quick reply options for the user")
+    progress: Optional[int] = Field(None, description="Roadmap creation progress percentage 0-100")
+    step: Optional[str] = Field(None, description="Current step in roadmap creation flow")
 
 
 class StartConversationRequest(BaseModel):
