@@ -27,22 +27,22 @@ USER PROFILE OR CUSTOM REQUEST:
 {user_profile}
 
 RULES:
-1. The roadmap must have a clear, descriptive title in English.
+1. The roadmap must have a clear, short, and catchy title in VIETNAMESE (e.g., "Tiếng Anh Giao Tiếp Công Sở", "Chinh phục IELTS 6.5").
 2. targetGoal MUST be one of: {valid_goals}
    Pick the one that best matches the user's learning goals.
 3. Each milestone must have:
-   - A descriptive title (e.g. "Foundation Building - Basic Greetings & Introductions")
+   - A descriptive title in VIETNAMESE (e.g. "Xây dựng nền tảng từ vựng cơ bản")
    - A targetLevel from this list IN ASCENDING ORDER: {valid_levels}
    - Milestones should progress from easier to harder levels
    - Early milestones can share the same level, but overall trend must be ascending
-4. Generate EXACTLY 10 milestones with order from 1 to 10.
-5. The description should summarize the roadmap's learning journey.
+4. Generate EXACTLY 10 milestones with order from 0 to 9.
+5. The description should summarize the roadmap's learning journey in VIETNAMESE.
 
 You MUST respond with ONLY a valid JSON object in this exact format:
 {{
-  "title": "Roadmap title",
+  "title": "Tên lộ trình",
   "targetGoal": "CAREER",
-  "description": "Description of the learning journey",
+  "description": "Mô tả ngắn gọn về hành trình học...",
   "milestones": [
     {{ "title": "Milestone 1 title", "targetLevel": "BEGINNER", "order": 0 }},
     {{ "title": "Milestone 2 title", "targetLevel": "BEGINNER", "order": 1 }},
@@ -139,8 +139,8 @@ class RoadmapGenerationUseCase:
             ))
 
         return GenerateRoadmapResponse(
-            title=data.get("title", "Personalized English Learning Roadmap"),
+            title=data.get("title") or "Lộ trình Tiếng Anh Cá Nhân Hóa",
             targetGoal=target_goal,
-            description=data.get("description", "A personalized learning journey"),
+            description=data.get("description") or "Hành trình học tập được thiết kế riêng cho bạn",
             milestones=milestones,
         )
