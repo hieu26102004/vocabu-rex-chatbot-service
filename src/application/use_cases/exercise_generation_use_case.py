@@ -77,12 +77,21 @@ You MUST generate exercises using ONLY these exercise types (choose a good mix):
         }}
       ]
     }}
-    Generate 8-12 segments alternating between male and female speakers.
-    Include questions on most segments (not the first and last).
-    Mix question types: match, trueFalse, listenChoose, multipleChoice.
-    - trueFalse format: {{ "type": "trueFalse", "statement": "...", "correctAnswer": true/false, "explanation": "..." }}
-    - listenChoose format: {{ "type": "listenChoose", "question": "...", "correctWords": ["a", "b"], "distractorWords": ["c", "d"] }}
-    - multipleChoice format: {{ "type": "multipleChoice", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }}
+    CRITICAL RULES FOR PODCAST:
+    You MUST generate EXACTLY 12 segments alternating between 'female' and 'male' speakers (starting with 'female').
+    You MUST follow this EXACT sequence of question types for each segment's "questions" field (do not deviate!):
+    - Segment 1 (female): questions: null
+    - Segment 2 (male): questions: [{{ "type": "match", "question": "...", "pairs": [{{ "left": "Eng", "right": "Viet" }}, ... ] }}] (exactly 4 pairs)
+    - Segment 3 (female): questions: [{{ "type": "trueFalse", "statement": "...", "correctAnswer": true/false, "explanation": "..." }}]
+    - Segment 4 (male): questions: [{{ "type": "listenChoose", "question": "...", "correctWords": ["a", "b", "c", "d"], "distractorWords": ["e", "f", "g", "h"] }}]
+    - Segment 5 (female): questions: [{{ "type": "multipleChoice", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }}]
+    - Segment 6 (male): questions: [{{ "type": "trueFalse", "statement": "...", "correctAnswer": true/false, "explanation": "..." }}]
+    - Segment 7 (female): questions: [{{ "type": "match", "question": "...", "pairs": [{{ "left": "Eng", "right": "Viet" }}, ... ] }}] (exactly 4 pairs)
+    - Segment 8 (male): questions: [{{ "type": "listenChoose", "question": "...", "correctWords": ["a", "b"], "distractorWords": ["c", "d"] }}]
+    - Segment 9 (female): questions: [{{ "type": "multipleChoice", "question": "...", "options": ["A", "B", "C", "D"], "correctAnswer": "A" }}]
+    - Segment 10 (male): questions: [{{ "type": "trueFalse", "statement": "...", "correctAnswer": true/false, "explanation": "..." }}]
+    - Segment 11 (female): questions: null
+    - Segment 12 (male): questions: [{{ "type": "match", "question": "...", "pairs": [{{ "left": "Eng", "right": "Viet" }}, ... ] }}] (exactly 4 pairs)
 
 IMPORTANT RULES:
 - Generate EXACTLY {exercise_count} exercises
