@@ -223,7 +223,8 @@ Return your evaluation in JSON format exactly matching this structure:
   ]
 }}
 
-Be lenient and focus on content quality over length. Accept short answers if they demonstrate understanding of the topic."""
+BẮT BUỘC (CRITICAL): Tất cả các trường nhận xét (feedback, grammar_feedback, vocabulary_feedback, content_feedback) và giải thích lỗi (explanation) PHẢI được viết bằng TIẾNG VIỆT.
+Hãy chấm điểm nhẹ nhàng, khuyến khích học viên, tập trung vào nội dung thay vì độ dài."""
             
             # Create user message
             user_message = f"""Evaluate this writing response:
