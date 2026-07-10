@@ -45,7 +45,8 @@ You MUST generate exercises using ONLY these exercise types (choose a good mix):
    Meta format: {{ "instruction": "Are these words similar in meaning?", "word1": "big", "word2": "large", "correctAnswer": true, "explanation": "Both mean having great size" }}
 
 8. **writing_prompt** - Writing exercise
-   Meta format: {{ "prompt": "Write about your daily routine", "minWords": 50, "maxWords": 150, "exampleAnswer": "Example answer text", "criteria": ["Use present simple tense", "Include time expressions"] }}
+   Meta format: {{ "prompt": "Hãy viết một [đoạn văn / bức thư / email / bài luận] khoảng 50-150 từ về [chủ đề].", "minWords": 50, "maxWords": 150, "exampleAnswer": "Example answer text", "criteria": ["Use present simple tense", "Include time expressions"] }}
+   Make sure the 'prompt' clearly specifies the format of the text to be written (e.g., paragraph, email, letter, essay) and is written in Vietnamese to be clear for the learner.
 
 9. **image_description** - Describe an image
    Meta format: {{ "imageUrl": "https://picsum.photos/400/300", "prompt": "Describe what you see in this image", "expectedResults": "A description of what should be in the answer" }}
