@@ -2,6 +2,12 @@
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 
+class ErrorDetail(BaseModel):
+    """Specific error in the user's text"""
+    original: str = Field(..., description="The original incorrect text")
+    corrected: str = Field(..., description="The corrected text")
+    explanation: str = Field(..., description="Explanation of why it was wrong")
+
 
 class WritingPromptScoreRequest(BaseModel):
     """Request to score a writing prompt exercise"""
@@ -16,6 +22,10 @@ class WritingPromptScoreResponse(BaseModel):
     score_percentage: float = Field(..., ge=0.0, le=100.0, description="Score as percentage (0-100)")
     feedback: str = Field(..., description="Brief feedback comment")
     performance_level: str = Field(..., description="excellent/good/satisfactory/needs_improvement/poor")
+    grammar_feedback: Optional[str] = Field(None, description="Feedback specific to grammar")
+    vocabulary_feedback: Optional[str] = Field(None, description="Feedback specific to vocabulary usage")
+    content_feedback: Optional[str] = Field(None, description="Feedback specific to content and prompt adherence")
+    detailed_errors: List[ErrorDetail] = Field(default_factory=list, description="List of specific errors found")
 
 
 class TranslateScoreRequest(BaseModel):

@@ -38,7 +38,11 @@ class ExerciseScoringUseCase:
                 is_correct=score_result['is_correct'],
                 score_percentage=score_result['score_percentage'],
                 feedback=score_result['feedback'],
-                performance_level=score_result['performance_level']
+                performance_level=score_result['performance_level'],
+                grammar_feedback=score_result.get('grammar_feedback'),
+                vocabulary_feedback=score_result.get('vocabulary_feedback'),
+                content_feedback=score_result.get('content_feedback'),
+                detailed_errors=score_result.get('detailed_errors', [])
             )
             
         except Exception as e:
@@ -201,12 +205,22 @@ class ExerciseScoringUseCase:
             # Create system prompt
             system_prompt = f"""You are a teacher grading writing exercises. Evaluate student responses fairly and encouragingly.
 
-Return your evaluation in JSON format:
+Return your evaluation in JSON format exactly matching this structure:
 {{
   "score_percentage": 85,
   "is_correct": true,
   "performance_level": "good",
-  "feedback": "Your response shows good understanding..."
+  "feedback": "Your overall feedback summary...",
+  "grammar_feedback": "Feedback on grammar...",
+  "vocabulary_feedback": "Feedback on vocabulary...",
+  "content_feedback": "Feedback on content...",
+  "detailed_errors": [
+    {{
+      "original": "Incorrect phrase",
+      "corrected": "Corrected phrase",
+      "explanation": "Why it is wrong"
+    }}
+  ]
 }}
 
 Be lenient and focus on content quality over length. Accept short answers if they demonstrate understanding of the topic."""
@@ -221,11 +235,7 @@ Example answer: {example_answer}
 
 Student response: {user_answer}
 
-Please evaluate and provide:
-1. Score out of 100
-2. Whether it's correct (true/false) - be lenient, accept answers that meet basic criteria even if short
-3. Performance level (excellent/good/satisfactory/needs_improvement/poor)
-4. Detailed feedback"""
+Please evaluate and provide detailed JSON feedback including overall feedback, grammar, vocabulary, and specific errors."""
             
             message_history = [{"role": "user", "content": user_message}]
             
@@ -288,7 +298,11 @@ Please evaluate and provide:
                 'is_correct': result.get('is_correct', True),
                 'score_percentage': float(result.get('score_percentage', 75)),
                 'feedback': result.get('feedback', 'Good effort!'),
-                'performance_level': result.get('performance_level', 'satisfactory')
+                'performance_level': result.get('performance_level', 'satisfactory'),
+                'grammar_feedback': result.get('grammar_feedback'),
+                'vocabulary_feedback': result.get('vocabulary_feedback'),
+                'content_feedback': result.get('content_feedback'),
+                'detailed_errors': result.get('detailed_errors', [])
             }
             
         except Exception as e:
@@ -478,14 +492,18 @@ Please evaluate:
             feedback = f"Nice effort! Your {word_count}-word response is on the right track."
             performance_level = "satisfactory"
         else:
-            feedback = f"Good start! Try to include more details related to the prompt. Current: {word_count} words."
+            feedback = f"Keep practicing! Your response needs more detail to address the prompt fully."
             performance_level = "needs_improvement"
             
         return {
             'is_correct': is_correct,
-            'score_percentage': float(min(100, max(50, total_score))),
+            'score_percentage': total_score,
             'feedback': feedback,
-            'performance_level': performance_level
+            'performance_level': performance_level,
+            'grammar_feedback': "Cannot provide grammar analysis in offline mode.",
+            'vocabulary_feedback': "Cannot provide vocabulary analysis in offline mode.",
+            'content_feedback': f"Word count: {word_count}. Matches with prompt: {word_overlap}.",
+            'detailed_errors': []
         }
     
     def _get_performance_level(self, score: int) -> str:
