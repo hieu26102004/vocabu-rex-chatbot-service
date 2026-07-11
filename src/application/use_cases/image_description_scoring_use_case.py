@@ -42,8 +42,14 @@ class ImageDescriptionScoringUseCase:
                     request.language
                 )
             
-        except ValidationError:
-            raise
+        except ValidationError as ve:
+            # Instead of crashing with 422, return a low score gracefully
+            return ImageDescriptionScoreResponse(
+                is_correct=False,
+                score_percentage=0.0,
+                feedback=f"Invalid input: {str(ve)}",
+                similarity_level="low"
+            )
         except Exception as e:
             raise ProcessingError(f"Failed to score image description: {str(e)}")
     
