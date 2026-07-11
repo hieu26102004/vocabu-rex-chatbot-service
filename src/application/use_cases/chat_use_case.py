@@ -133,11 +133,20 @@ class ChatUseCase:
                 except Exception as e:
                     logger.warning(f"RAG retrieval failed, continuing without context: {e}")
             
-            ai_response = await self.ai_service.generate_response_with_system_prompt(
-                conversation.get_message_history_for_ai(),
-                system_prompt,
-                conversation.context
-            )
+            if getattr(request, "audio_base64", None):
+                ai_response = await self.ai_service.generate_response_with_audio(
+                    conversation.get_message_history_for_ai(),
+                    system_prompt,
+                    request.audio_base64,
+                    getattr(request, "audio_format", "audio/wav"),
+                    conversation.context
+                )
+            else:
+                ai_response = await self.ai_service.generate_response_with_system_prompt(
+                    conversation.get_message_history_for_ai(),
+                    system_prompt,
+                    conversation.context
+                )
             
             # Parse METADATA: {...} if present
             quick_replies = None
@@ -147,13 +156,28 @@ class ChatUseCase:
             
             metadata_regex = re.compile(r'METADATA:\s*({.*?})\s*$', re.DOTALL | re.MULTILINE)
             metadata_match = metadata_regex.search(ai_response)
+            
+            pronunciation_score = None
+            pronunciation_feedback = None
+            user_transcript = None
+            
             if metadata_match:
                 try:
                     meta = json.loads(metadata_match.group(1))
                     quick_replies = meta.get("quick_replies")
                     progress = meta.get("progress")
                     step = meta.get("step")
-                    logger.info(f"Parsed METADATA: progress={progress}, step={step}, replies={quick_replies}")
+                    
+                    # Voice specific metadata
+                    pronunciation_score = meta.get("pronunciation_score")
+                    pronunciation_feedback = meta.get("pronunciation_feedback")
+                    user_transcript = meta.get("transcript")
+                    
+                    logger.info(f"Parsed METADATA: progress={progress}, step={step}, replies={quick_replies}, score={pronunciation_score}")
+                    
+                    if user_transcript:
+                        user_message.content = user_transcript
+                        
                 except json.JSONDecodeError as e:
                     logger.warning(f"Failed to parse METADATA JSON: {e}")
                 # Remove METADATA from displayed text
@@ -182,6 +206,9 @@ class ChatUseCase:
                 quick_replies=quick_replies,
                 progress=progress,
                 step=step,
+                pronunciation_score=pronunciation_score,
+                pronunciation_feedback=pronunciation_feedback,
+                user_transcript=user_transcript
             )
             
         except Exception as e:
@@ -315,6 +342,13 @@ Hãy chắc chắn thay thế phần <tóm tắt...> bằng tiếng Anh mô tả
 - ALWAYS respond in the language the student explicitly requests. If they ask you to speak Vietnamese or explain in Vietnamese, do it immediately.
 - If there is no specific request, default to speaking primarily in ENGLISH (since this is an English practice app).
 - If the student speaks Vietnamese but seems stuck, you can respond in a mix of Vietnamese and English to guide them naturally.
+
+🚨 BẮT BUỘC (CRITICAL): If the user provides audio, you MUST evaluate their pronunciation and transcribe what they said. 
+EVERY single response you give MUST end with a JSON block in the exact following format:
+METADATA: {"transcript": "<what the user said in the audio>", "pronunciation_score": <0-100>, "pronunciation_feedback": "<brief feedback on pronunciation in Vietnamese>"}
+
+If no audio was provided or it's a text message, set pronunciation_score to null and transcript to null:
+METADATA: {"transcript": null, "pronunciation_score": null, "pronunciation_feedback": null}
 
 Remember: You are Rex, a voice on a call. Be conversational, be human, be fun!"""
         }

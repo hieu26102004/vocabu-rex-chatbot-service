@@ -28,6 +28,19 @@ class GeminiAIServiceAdapter(AIService):
         return await self.gemini_service.generate_response_with_system_prompt(
             message_history, system_prompt, context
         )
+
+    async def generate_response_with_audio(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        audio_base64: str,
+        audio_format: str = "audio/wav",
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response with audio input"""
+        return await self.gemini_service.generate_response_with_audio(
+            message_history, system_prompt, audio_base64, audio_format, context
+        )
     
     async def generate_conversation_title(self, first_message: str) -> str:
         """Generate a title for conversation based on first message"""

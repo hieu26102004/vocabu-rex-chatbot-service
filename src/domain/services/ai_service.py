@@ -24,6 +24,18 @@ class AIService(ABC):
     ) -> str:
         """Generate AI response with specific system prompt"""
         pass
+
+    @abstractmethod
+    async def generate_response_with_audio(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        audio_base64: str,
+        audio_format: str = "audio/wav",
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response with audio input"""
+        pass
     
     @abstractmethod
     async def generate_conversation_title(self, first_message: str) -> str:

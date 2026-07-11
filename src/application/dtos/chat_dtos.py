@@ -6,11 +6,13 @@ from pydantic import BaseModel, Field
 
 class ChatMessageRequest(BaseModel):
     """Request model for sending a chat message"""
-    message: str = Field(..., min_length=1, max_length=1000, description="Chat message content")
+    message: str = Field(..., description="Chat message content or transcript placeholder")
     conversation_id: Optional[str] = Field(None, description="Existing conversation ID")
     user_id: Optional[str] = Field(None, description="User ID for conversation tracking")
     role: Optional[str] = Field("vocabulary_expert", description="AI role: grammar_tutor, speaking_partner, corrector_assistant, vocabulary_expert, app_navigator")
     context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Additional context")
+    audio_base64: Optional[str] = Field(None, description="Base64 encoded audio data")
+    audio_format: Optional[str] = Field("audio/wav", description="MIME type of the audio data")
 
 
 class ChatMessageResponse(BaseModel):
@@ -24,6 +26,10 @@ class ChatMessageResponse(BaseModel):
     quick_replies: Optional[List[str]] = Field(None, description="AI-generated quick reply options for the user")
     progress: Optional[int] = Field(None, description="Roadmap creation progress percentage 0-100")
     step: Optional[str] = Field(None, description="Current step in roadmap creation flow")
+    audio_base64: Optional[str] = Field(None, description="Base64 encoded AI response audio")
+    pronunciation_score: Optional[int] = Field(None, description="User pronunciation score (0-100)")
+    pronunciation_feedback: Optional[str] = Field(None, description="Feedback on user pronunciation")
+    user_transcript: Optional[str] = Field(None, description="Transcript of the user audio if audio was provided")
 
 
 class StartConversationRequest(BaseModel):

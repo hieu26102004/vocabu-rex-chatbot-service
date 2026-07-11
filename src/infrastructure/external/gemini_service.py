@@ -88,11 +88,49 @@ class GeminiAIService:
             logger.error(f"Gemini API error: {str(e)}")
             raise GeminiAPIException(f"Failed to generate response: {str(e)}")
 
-    def _generate_sync_response(self, prompt: str) -> str:
+    async def generate_response_with_audio(
+        self,
+        message_history: List[Dict[str, Any]],
+        system_prompt: str,
+        audio_base64: str,
+        audio_format: str = "audio/wav",
+        context: Dict[str, Any] = None
+    ) -> str:
+        """Generate AI response using specific system prompt and audio input"""
+        try:
+            # Build prompt with custom system instruction
+            enhanced_prompt_text = self._build_prompt_with_system_instruction(
+                message_history, system_prompt, context
+            )
+            
+            audio_part = {
+                "mime_type": audio_format,
+                "data": audio_base64
+            }
+            
+            # The parts list sent to Gemini
+            contents = [audio_part, enhanced_prompt_text]
+            
+            # Call Gemini API in thread pool to avoid blocking
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(
+                None, 
+                self._generate_sync_response, 
+                contents
+            )
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Gemini API error: {str(e)}")
+            raise GeminiAPIException(f"Failed to generate response with audio: {str(e)}")
+
+
+    def _generate_sync_response(self, prompt: Any) -> str:
         """Synchronous call to Gemini API using default model"""
         return self.generate_content_with_retry(self.model, prompt)
 
-    def generate_content_with_retry(self, model, prompt: str) -> str:
+    def generate_content_with_retry(self, model, prompt: Any) -> str:
         """Synchronous call to Gemini API with key rotation and retry logic"""
         max_retries = len(self.api_keys)
         last_exception = None
