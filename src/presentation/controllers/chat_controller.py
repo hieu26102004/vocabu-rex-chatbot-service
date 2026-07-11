@@ -34,9 +34,14 @@ def get_chat_use_case():
     user_repo = UserRepository()
     conversation_repo = ConversationRepository()
     ai_service = GeminiAIServiceAdapter()
+    
     from ...infrastructure.external.rag_service import get_rag_service
     rag_service = get_rag_service()
-    return ChatUseCase(user_repo, conversation_repo, ai_service, rag_service)
+    
+    from ...infrastructure.external.google_tts_service import GoogleTTSService
+    tts_service = GoogleTTSService()
+    
+    return ChatUseCase(user_repo, conversation_repo, ai_service, rag_service, tts_service)
 
 # Dependency provider for ai_service (for health_check)
 def get_ai_service():

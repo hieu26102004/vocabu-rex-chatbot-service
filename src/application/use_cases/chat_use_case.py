@@ -34,12 +34,14 @@ class ChatUseCase:
         user_repository: UserRepository,
         conversation_repository: ConversationRepository,
         ai_service: AIService,
-        rag_service: RAGService = None
+        rag_service: RAGService = None,
+        tts_service = None
     ):
         self.user_repository = user_repository
         self.conversation_repository = conversation_repository
         self.ai_service = ai_service
         self.rag_service = rag_service
+        self.tts_service = tts_service
     
     async def start_conversation(self, request: StartConversationRequest) -> ConversationResponse:
         """Start a new conversation"""
@@ -193,6 +195,15 @@ class ChatUseCase:
             )
             conversation.add_message(ai_message)
             
+            # Synthesize TTS if in voice mode
+            ai_audio_base64 = None
+            if self.tts_service and role == "voice_partner" and ai_response_clean:
+                try:
+                    logger.info("Synthesizing AI response with Google TTS...")
+                    ai_audio_base64 = await self.tts_service.synthesize(ai_response_clean)
+                except Exception as tts_err:
+                    logger.warning(f"Google TTS synthesis failed: {tts_err}")
+            
             # Update conversation
             await self.conversation_repository.update_conversation(conversation)
             
@@ -206,6 +217,7 @@ class ChatUseCase:
                 quick_replies=quick_replies,
                 progress=progress,
                 step=step,
+                audio_base64=ai_audio_base64,
                 pronunciation_score=pronunciation_score,
                 pronunciation_feedback=pronunciation_feedback,
                 user_transcript=user_transcript
