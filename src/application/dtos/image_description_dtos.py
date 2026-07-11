@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 class ImageDescriptionScoreRequest(BaseModel):
     """Request to score image description"""
-    user_content: str = Field(..., min_length=5, max_length=2000, description="User's description of the image")
-    expected_results: str = Field(..., min_length=5, max_length=2000, description="Expected description or answer")
+    user_content: str = Field(..., max_length=2000, description="User's description of the image")
+    expected_results: str = Field(..., max_length=2000, description="Expected description or answer")
     language: str = Field("en", pattern="^(en|vi)$", description="Language code (en/vi)")
 
 
